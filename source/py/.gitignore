@@ -9,3 +9,5 @@ __pycache__/
 # Данные и билды
 data
 build
+
+test.py
