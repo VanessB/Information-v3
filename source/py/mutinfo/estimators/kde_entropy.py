@@ -1,15 +1,13 @@
+import csv
+import json
 import math
 import numpy as np
-
 import os
 import shutil
-import json
-import csv
-
-from sklearn.neighbors import KernelDensity
-from sklearn.model_selection import GridSearchCV
 
 from joblib import Parallel, delayed
+from sklearn.neighbors import KernelDensity
+from sklearn.model_selection import GridSearchCV
 
 
 def _find_best_bandwidth(data, min_bw, max_bw,

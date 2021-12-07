@@ -1,6 +1,6 @@
 import numpy as np
 
-def get_norm_corr_coef_from_MI(mutual_information):
+def norm_corr_from_MI(mutual_information):
     """
     Получение коэффициента корреляции для двух нормальных случайных величин
     по их взаимной информации.

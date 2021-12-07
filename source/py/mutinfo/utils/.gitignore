@@ -6,6 +6,9 @@ __pycache__/
 # Jupyter Notebook
 .ipynb_checkpoints
 
+# Vim
+*.swp
+
 # Данные и билды
 data
 build

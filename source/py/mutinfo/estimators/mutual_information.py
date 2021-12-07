@@ -69,23 +69,24 @@ class MutualInfoEstimator:
         H_X, H_X_err = self.X_entropy_estimator_.predict(X, verbose=verbose)
 
         if self.Y_is_discrette_:
+            # Подсчёт частот.
             frequencies = Counter(Y)
-            #for y in Y:
-            #    frequencies[y] += 1
-
             for y in frequencies.keys():
                 frequencies[y] /= X.shape[0]
 
+            # Вычисление условной энтропии для каждого класса Y.
             H_X_mid_y = dict()
             for y in frequencies.keys():
                 X_mid_y = np.array([X[i] for i in range(X.shape[0]) if Y[i] == y])
 
                 H_X_mid_y[y] = self.X_entropy_estimator_.predict(X_mid_y, verbose=verbose)
 
+            # Итоговая условная энтропия для X.
             cond_H_X     = np.sum([frequencies[y] * H_X_mid_y[y][0] for y in frequencies.keys()])
             cond_H_X_err = np.sum([frequencies[y] * H_X_mid_y[y][1] for y in frequencies.keys()])
 
             return (H_X - cond_H_X, H_X_err + cond_H_X_err)
+
         else:
             H_Y, H_Y_err = self.Y_entropy_estimator_.predict(Y, verbose=verbose)
             H_X_Y, H_X_Y_err = self.X_Y_entropy_estimator_.predict(np.concatenate([X, Y], axis=1), verbose=verbose)
