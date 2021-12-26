@@ -71,8 +71,16 @@ class EntropyEstimator:
         verbose - подробность вывода.
         """
 
-        max_bw = np.sqrt(2.0 * np.max(np.std(data, axis=0)))
-        min_bw = max_bw / np.sqrt(data.shape[0])
+        #std = np.max(np.std(data, axis = 0))
+        cov_matrix = np.cov(data, rowvar=False)
+        if data.shape[1] == 1:
+            cov_matrix = np.array([[cov_matrix]])
+
+        eigen_values, _ = np.linalg.eigh(cov_matrix)
+        factor = np.power(data.shape[0], 0.2 / data.shape[1])
+
+        min_bw = 0.5 * np.sqrt(eigen_values[0]) / factor
+        max_bw = 1.06 * np.sqrt(eigen_values[-1]) / factor
 
         self.search_results_ = _find_best_bandwidth(data, min_bw, max_bw,
                 self.KernelDensity_args,
@@ -109,7 +117,7 @@ class EntropyEstimator:
 
         # Создание временных папок для сохранения прогресса.
         path = os.path.abspath(os.getcwd())
-        parts_path = path + ".LOO_PARTS/"
+        parts_path = path + "/.temp/LOO_PARTS/"
         os.makedirs(parts_path, exist_ok=True)
 
         # Если дано first_N, энтропия будет оцениваться только на первых first_N элементах.
