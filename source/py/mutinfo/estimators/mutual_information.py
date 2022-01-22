@@ -1,6 +1,8 @@
 import numpy as np
-from collections import Counter
+from scipy.linalg import block_diag
+from collections  import Counter
 from .kde_entropy import EntropyEstimator
+
 
 class MutualInfoEstimator:
     """
@@ -35,24 +37,37 @@ class MutualInfoEstimator:
 
         assert X.shape[0] == Y.shape[0]
 
-        if verbose >= 1:
-            print("Настройка эстиматора для X")
-
-        self.X_entropy_estimator_ = EntropyEstimator(n_jobs=self.n_jobs)
-        self.X_entropy_estimator_.fit(X, verbose=verbose)
-
-        if not self.Y_is_discrette_:
+        if self.Y_is_discrette_:
             if verbose >= 1:
-                print("Настройка эстиматора для Y")
+                print("Настройка оценщика для X")
 
-            self.Y_entropy_estimator_ = EntropyEstimator(n_jobs=self.n_jobs)
-            self.Y_entropy_estimator_.fit(Y, verbose=verbose)
+            self.X_entropy_estimator_ = EntropyEstimator(n_jobs=self.n_jobs)
+            self.X_entropy_estimator_.fit(X, verbose=verbose)
+
+        else:
 
             if verbose >= 1:
-                print("Настройка эстиматора для (X,Y)")
+                print("Настройка оценщика для (X,Y)")
 
             self.X_Y_entropy_estimator_ = EntropyEstimator(n_jobs=self.n_jobs)
             self.X_Y_entropy_estimator_.fit(np.concatenate([X, Y], axis=1), verbose=verbose)
+
+            if verbose >= 1:
+                print("Настройка оценщика для X")
+
+            self.X_entropy_estimator_ = EntropyEstimator(n_jobs=self.n_jobs)
+            self.X_entropy_estimator_.fit(X, fit_bandwidth=False, verbose=verbose)
+
+            if verbose >= 1:
+                print("Настройка оценщика для Y")
+
+            self.Y_entropy_estimator_ = EntropyEstimator(n_jobs=self.n_jobs)
+            self.Y_entropy_estimator_.fit(Y, fit_bandwidth=False, verbose=verbose)
+
+            # Использование подобранной ширины окна для оценки плотностей X и Y.
+            bandwidth = self.X_Y_entropy_estimator_.best_estimator_.get_params()['bandwidth']
+            self.X_entropy_estimator_.best_estimator_.set_params(bandwidth=bandwidth)
+            self.Y_entropy_estimator_.best_estimator_.set_params(bandwidth=bandwidth)
 
 
     def predict(self, X, Y, verbose=0):
@@ -66,6 +81,8 @@ class MutualInfoEstimator:
 
         assert X.shape[0] == Y.shape[0]
 
+        if verbose >= 1:
+            print("Оценка энтропии для X")
         H_X, H_X_err = self.X_entropy_estimator_.predict(X, verbose=verbose)
 
         if self.Y_is_discrette_:
@@ -88,7 +105,11 @@ class MutualInfoEstimator:
             return (H_X - cond_H_X, H_X_err + cond_H_X_err)
 
         else:
+            if verbose >= 1:
+                print("Оценка энтропии для Y")
             H_Y, H_Y_err = self.Y_entropy_estimator_.predict(Y, verbose=verbose)
+            if verbose >= 1:
+                print("Оценка энтропии для (X,Y)")
             H_X_Y, H_X_Y_err = self.X_Y_entropy_estimator_.predict(np.concatenate([X, Y], axis=1), verbose=verbose)
 
             return (H_X + H_Y - H_X_Y, H_X_err + H_Y_err + H_X_Y_err)
