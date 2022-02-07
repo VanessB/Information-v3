@@ -80,12 +80,13 @@ class EntropyEstimator:
         verbose - подробность вывода.
         """
 
+        # Матрица ковариации (требуется для нормировки).
+        # Учитывается, что в случае одномерных данных np.cov возвращает число.
         cov_matrix = np.cov(data, rowvar=False)
         if data.shape[1] == 1:
             cov_matrix = np.array([[cov_matrix]])
 
         # Нормировка данных.
-        _data = None
         if self.rescale:
             if fit_scaling_matrix:
                 self.scaling_matrix_ = get_scaling_matrix(cov_matrix)
@@ -95,15 +96,17 @@ class EntropyEstimator:
             min_std = 1.0
             max_std = 1.0
         else:
+            _data = data
             eigenvalues, _ = np.linalg.eigh(cov_matrix)
             min_std = np.sqrt(eigenvalues[0])
             max_std = np.sqrt(eigenvalues[-1])
 
         # Подбор оптимальной ширины окна.
-        factor = np.power(_data.shape[0], 0.2 / _data.shape[1])
+        # Начальное приближение - Silverman's rule-of-thumb.
+        bw_factor = np.power(_data.shape[0], 0.2 / _data.shape[1])
         if fit_bandwidth:
-            min_bw =  0.5 * min_std / factor
-            max_bw = 1.06 * max_std / factor
+            min_bw =  0.5 * min_std / bw_factor
+            max_bw = 1.06 * max_std / bw_factor
 
             self.search_results_ = _find_best_bandwidth(_data, min_bw, max_bw,
                     self.KernelDensity_args,
@@ -115,7 +118,7 @@ class EntropyEstimator:
                 print(self.best_estimator_.get_params())
         else:
             self.best_estimator_ = KernelDensity(**self.KernelDensity_args,
-                    bandwidth = 1.06 * max_std / factor)
+                    bandwidth = 1.06 * max_std / bw_factor)
 
 
     def predict(self, data, first_n_elements=None, n_parts=10, batch_size=32,
@@ -137,11 +140,7 @@ class EntropyEstimator:
         self.best_estimator_.set_params(rtol = self.estimation_rtol)
 
         # Нормировка данных.
-        _data = None
-        if self.rescale:
-            _data = data @ self.scaling_matrix_
-        else:
-            _data = data.copy()
+        _data = data @ self.scaling_matrix_ if self.rescale else data
 
         # Функция для вычисления элемента суммы.
         def _loo_step(data, KernelDensity_params, index):

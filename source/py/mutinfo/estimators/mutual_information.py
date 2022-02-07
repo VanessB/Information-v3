@@ -1,3 +1,4 @@
+import math
 import numpy as np
 from scipy.linalg import block_diag
 from collections  import Counter
@@ -10,15 +11,15 @@ class MutualInfoEstimator:
 
     """
 
-    def __init__(self, Y_is_discrette=False, n_jobs=1):
+    def __init__(self, Y_is_discrete=False, n_jobs=1):
         """
         Инициализация.
 
-        Y_is_discrette - является ли Y дискретной случайной величиной?
-        n_jobs         - число задействованных потоков.
+        Y_is_discrete - является ли Y дискретной случайной величиной?
+        n_jobs        - число задействованных потоков.
         """
 
-        self.Y_is_discrette_ = Y_is_discrette
+        self.Y_is_discrete_ = Y_is_discrete
         self.n_jobs = n_jobs
 
         self.X_entropy_estimator_ = None
@@ -37,7 +38,7 @@ class MutualInfoEstimator:
 
         assert X.shape[0] == Y.shape[0]
 
-        if self.Y_is_discrette_:
+        if self.Y_is_discrete_:
             if verbose >= 1:
                 print("Настройка оценщика для X")
 
@@ -45,7 +46,6 @@ class MutualInfoEstimator:
             self.X_entropy_estimator_.fit(X, verbose=verbose)
 
         else:
-
             if verbose >= 1:
                 print("Настройка оценщика для (X,Y)")
 
@@ -85,22 +85,32 @@ class MutualInfoEstimator:
             print("Оценка энтропии для X")
         H_X, H_X_err = self.X_entropy_estimator_.predict(X, verbose=verbose)
 
-        if self.Y_is_discrette_:
+        if self.Y_is_discrete_:
             # Подсчёт частот.
             frequencies = Counter(Y)
             for y in frequencies.keys():
-                frequencies[y] /= X.shape[0]
+                frequencies[y] /= Y.shape[0]
+
+            if verbose >= 2:
+                print("Частоты: ")
+                print(frequencies)
 
             # Вычисление условной энтропии для каждого класса Y.
             H_X_mid_y = dict()
             for y in frequencies.keys():
-                X_mid_y = np.array([X[i] for i in range(X.shape[0]) if Y[i] == y])
+                X_mid_y = X[Y == y]
 
-                H_X_mid_y[y] = self.X_entropy_estimator_.predict(X_mid_y, verbose=verbose)
+                # Для каждого y требуется обучить отдельный оценщик.
+                if verbose >= 1:
+                    print("Оценка энтропии для X_mid_y")
+                X_mid_y_entropy_estimator = EntropyEstimator(n_jobs=self.n_jobs)
+                X_mid_y_entropy_estimator.fit(X_mid_y, verbose=verbose)
+                H_X_mid_y[y] = X_mid_y_entropy_estimator.predict(X_mid_y, verbose=verbose)
+                #H_X_mid_y[y] = self.X_entropy_estimator_.predict(X_mid_y, verbose=verbose)
 
             # Итоговая условная энтропия для X.
-            cond_H_X     = np.sum([frequencies[y] * H_X_mid_y[y][0] for y in frequencies.keys()])
-            cond_H_X_err = np.sum([frequencies[y] * H_X_mid_y[y][1] for y in frequencies.keys()])
+            cond_H_X     = math.fsum([frequencies[y] * H_X_mid_y[y][0] for y in frequencies.keys()])
+            cond_H_X_err = math.fsum([frequencies[y] * H_X_mid_y[y][1] for y in frequencies.keys()])
 
             return (H_X - cond_H_X, H_X_err + cond_H_X_err)
 
