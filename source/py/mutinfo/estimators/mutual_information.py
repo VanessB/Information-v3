@@ -46,6 +46,7 @@ class MutualInfoEstimator:
 
             self.X_Y_entropy_estimator_ = EntropyEstimator(n_jobs=self.n_jobs)
             self.X_Y_entropy_estimator_.fit(np.concatenate([X, Y], axis=1), verbose=verbose)
+            #bandwidth = self.X_Y_entropy_estimator_.best_estimator_.bandwidth
 
             if verbose >= 1:
                 print("Настройка оценщика для X")
@@ -60,9 +61,8 @@ class MutualInfoEstimator:
             self.Y_entropy_estimator_.fit(Y, fit_bandwidth=False, verbose=verbose)
 
             # Использование подобранной ширины окна для оценки плотностей X и Y.
-            bandwidth = self.X_Y_entropy_estimator_.best_estimator_.get_params()['bandwidth']
-            self.X_entropy_estimator_.best_estimator_.set_params(bandwidth=bandwidth)
-            self.Y_entropy_estimator_.best_estimator_.set_params(bandwidth=bandwidth)
+            #self.X_entropy_estimator_.best_estimator_.bandwidth = bandwidth
+            #self.Y_entropy_estimator_.best_estimator_.bandwidth = bandwidth
 
         elif self.X_is_discrete_ and not self.Y_is_discrete_:
             if verbose >= 1:
