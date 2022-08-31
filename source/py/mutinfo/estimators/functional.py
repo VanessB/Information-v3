@@ -1,6 +1,8 @@
 import math
 import numpy as np
 
+from scipy.special import loggamma
+
 from joblib import Parallel, delayed
 from sklearn.neighbors import BallTree, DistanceMetric
 
@@ -12,40 +14,62 @@ class Functional:
     Класс для вычисление функционалов на основе оценки плотности.
     """
     
-    def __init__(self):
+    def __init__(self, atol=0.0, rtol=0.0):
         """
-        Инициализация.
+        Инициализация экземпляра класса.
+        
+        Параметры
+        ---------
+        atol : float
+            Допустимая абсолютная ошибка.
+        rtol : float
+            Допустимая относительная ошибка.
         """
         
-        pass
+        self.atol = atol
+        self.rtol = rtol
+    
     
     def fit(self, X, y=None, sample_weight=None):
         """
         Построить оценку плотности по данным.
 
-        X - данные образцов.
-        y - данные меток (игнорируются)
-        sample_weight - веса образцов.
+        Параметры
+        ---------
+        X : array
+            Данные образцов.
+        y : array
+            Данные меток (игнорируются).
+        sample_weight : array
+            Веса образцов.
         """
         
         self.data = X
+        
         
     def get_densities(self, X):
         """
         Получение плотности в точках X.
         
-        X - набор точек.
+        Параметры
+        ---------
+        X : array
+            Набор точек.
         """
         
         raise NotImplementedError
+        
         
     def get_loo_densities(self, outliers_atol=0.0):
         """
         Получение плотности в точках, на которых было произведено обучение.
         Применяется метод убрать-один-элемент.
         
-        outliers_atol - абсолютный порог для значения плотности,
-                        ниже которого точки отбрасываются как выбросы.
+        Параметры
+        ---------
+        outliers_atol : float
+            Абсолютный порог для значения плотности,
+            ниже которого точки отбрасываются как выбросы.
         """
         
         raise NotImplementedError
@@ -55,11 +79,17 @@ class Functional:
         """
         Вычисление функционала методом убрать-один-элемент.
         
-        func           - функционал.
-        outliers_atol  - абсолютный порог для значения плотности,
-                         ниже которого точки отбрасываются как выбросы.
-        bootstrap_size - размер бустстрепной выборки.
-        verbose        - подробность вывода.
+        Параметры
+        ---------
+        func : callable
+            Интегрируемая функция.
+        outliers_atol : float
+            Абсолютный порог для значения плотности,
+            ниже которого точки отбрасываются как выбросы.
+        bootstrap_size : int
+            Размер бустстрепной выборки.
+        verbose : int
+            Подробность вывода.
         """
         
         n_samples, dim = self.tree_.data.shape
@@ -71,7 +101,7 @@ class Functional:
         
         if bootstrap_size is None:
             # Вычисление функционала простым усреднением.
-            values = func(densities)
+            values = self.get_values_(func, densities)
             
             # Среднее и дисперсия функционала.
             mean = math.fsum(values) / n_samples
@@ -82,7 +112,7 @@ class Functional:
             values = []
             for i in range(bootstrap_size):
                 values.append(
-                    math.fsum(func(np.random.choice(densities, size=n_samples)) / n_samples)
+                    math.fsum(self.get_values_(func, np.random.choice(densities, size=n_samples)) / n_samples)
                 )
 
             # Среднее и дисперсия функционала.      
@@ -90,6 +120,35 @@ class Functional:
             std  = np.std(values)
 
         return mean, std
+    
+    
+    def get_values_(self, func, densities):
+        """
+        Вычисление значений функции.
+        
+        Параметры
+        ---------
+        func : callable
+            Интегрируемая функция.
+        densities : float
+            Вычисленные плотности.
+        """
+        
+        # Если массив плотностей одномерен, добавляем фиктивную ось
+        # - обобщение на взвешенный случай.
+        if len(densities.shape) == 1:
+            densities = densities[:,np.newaxis]
+        
+        # Веса.
+        n_components = densities.shape[1]
+        if not hasattr(self, 'weights'):
+            weights = np.zeros(n_components)
+            weights[0] = 1.0
+        else:
+            weights = self.weights
+            
+        # Вычисление значений.
+        return func(densities) @ weights
 
 
 
@@ -98,43 +157,66 @@ class KDEFunctional(Functional):
     Класс для вычисление функционалов на основе ядерной оценки плотности.
     """
 
-    def __init__(self, *args, bandwidth=1.0, algorithm='ball_tree', kernel='gaussian',
-                 metric='euclidean', atol=0, rtol=0, breadth_first=True, leaf_size=40,
-                 metric_params=None, n_jobs=1):
+    def __init__(self, *args, kernel='gaussian', bandwidth_algorithm='loo_cl', tree_algorithm='ball_tree',
+                 tree_params={'leaf_size': 40, 'metric': 'euclidean'}, n_jobs=1):
         """
-        Инициализация.
+        Инициализация экземпляра класса.
+        
+        Параметры
+        ---------
+        kernel : str
+            Ядро.
+        bandwidth_algorithm : str
+            Алгоритм выбора ширины окна.
+              'loo_cl'  - перекрестная проверка методом убрать-один-элемент.
+              'loo_lsq' - минимизация оценки среднеквадратического отклонения.
+        tree_algorithm : str
+            Используемое дерево.
+        tree_params : dict
+            Параметры дерева.
+        n_jobs : int
+            Число потоков, используемых при вычислении оценки.
         """
         
         super().__init__(*args)
-
-        self.bandwidth = bandwidth
-        self.algorithm = algorithm
+        
         self.kernel = kernel
-        self.metric = metric
-        self.atol = atol
-        self.rtol = rtol
-        self.breadth_first = breadth_first
-        self.leaf_size = leaf_size
-        self.metric_params = metric_params
+        self.bandwidth_algorithm = bandwidth_algorithm
+        self.bandwidth = None
+        self.tree_algorithm = tree_algorithm
+        self.tree_params = tree_params
         self.n_jobs = n_jobs
 
 
-    def fit(self, X, y=None, sample_weight=None):
+    def fit(self, X, y=None, sample_weight=None, fit_bandwidth=True, verbose=0):
         """
         Построить ядерную оценку плотности по данным.
 
-        X - данные образцов.
-        y - данные меток (игнорируются)
-        sample_weight - веса образцов.
+        Параметры
+        ---------
+        X : array
+            Данные образцов.
+        y : array
+            Данные меток (игнорируются).
+        sample_weight : array
+            Веса образцов (игнорируются).
+        fit_bandwidth : bool
+            Требуется ли подбирать ширину окна.
+        verbose : int
+            Подробность вывода.
         """
 
         assert len(X.shape) == 2
         self.data = X
         
-        if self.algorithm == 'ball_tree':
-            self.tree_ = BallTree(X, leaf_size=self.leaf_size, metric=self.metric)
+        if self.tree_algorithm == 'ball_tree':
+            self.tree_ = BallTree(X, **self.tree_params)
         else:
             raise NotImplementedError
+            
+        # Выбор ширины окна.
+        if fit_bandwidth:
+            self.set_optimal_bandwidth(verbose=verbose)
             
             
     def get_loo_densities(self, outliers_atol=0.0, parallel=True, n_parts=None, verbose=0):
@@ -142,11 +224,17 @@ class KDEFunctional(Functional):
         Получение плотности в точках, на которых было произведено обучение.
         Применяется метод убрать-один-элемент.
         
-        outliers_atol - абсолютный порог для значения плотности,
-                        ниже которого точки отбрасываются как выбросы.
-        parallel      - многопоточное вычисление плотностей.
-        n_parts       - число частей, на которые разбиваются данные при параллельной обработке.
-        verbose       - подробность вывода.
+        Параметры
+        ---------
+        outliers_atol : float
+            Абсолютный порог для значения плотности,
+            ниже которого точки отбрасываются как выбросы.
+        parallel : bool
+            Многопоточное вычисление плотностей.
+        n_parts : int
+            Число частей, на которые разбиваются данные при параллельной обработке.
+        verbose : int
+            Подробность вывода.
         """
         
         n_samples, dim = self.tree_.data.shape
@@ -164,6 +252,7 @@ class KDEFunctional(Functional):
         else:
             raise NotImplementedError
             
+        # Нормировка на dim-мерный шар.
         diag_element /= self.bandwidth**dim
 
         # Подсчёт плотностей вероятности в точках.
@@ -177,15 +266,16 @@ class KDEFunctional(Functional):
             def _loo_step(tree, bandwidth, begin, end, params):
                 return tree.kernel_density(tree.data[begin:end,:], bandwidth, **params)
 
+            # Параметры вычисления плотности.
             params = {
-                #'bandwidth' : self.bandwidth,
-                'kernel'    : self.kernel,
-                'atol'      : self.atol,
-                'rtol'      : self.rtol,
-                'breadth_first' : self.breadth_first,
-                'return_log' : False
+                'kernel'        : self.kernel,
+                'atol'          : self.atol,
+                'rtol'          : self.rtol,
+                'breadth_first' : True, #self.breadth_first,
+                'return_log'    : False
             }
             
+            # Параллельное вычисление.
             densities = Parallel(n_jobs=min(n_parts, self.n_jobs), verbose=verbose, batch_size=1)(
                     delayed(_loo_step)(
                         self.tree_,
@@ -228,22 +318,23 @@ class KDEFunctional(Functional):
         return densities
 
 
-    def set_optimal_bandwidth(self, algorithm='loo_cl', min_bw=None, max_bw=None, verbose=0):
+    def set_optimal_bandwidth(self, min_bw=None, max_bw=None, verbose=0):
         """
         Поиск оптимальной ширины окна.
         
-        algorithm - алгоритм для поиска оптимальной ширины окна.
-                    Доступные варианты:
-                    1) loo_cl - минимизация оценки расстояния Кульбака-Лейблера
-                                методом убрать-один-элемент.
-                    2) loo_lsq - минимизация оценки среднеквадратической ошибки.
-        min_bw    - левый конец интервала поиска ширины окна.
-        max_bw    - правый конец интервала поиска ширины окна.
-        verbose   - подробность вывода.
+        Параметры
+        ---------
+        min_bw : float
+            Левый конец интервала поиска ширины окна.
+        max_bw : float
+            Правый конец интервала поиска ширины окна.
+        verbose : int
+            Подробность вывода.
         """
         
         n_samples, dim = self.tree_.data.shape
         
+        # Константы, необходимые для подбора начального приближения.
         bw_factor = np.power(n_samples, 0.2 / dim)
         std = np.std(self.tree_.data, axis=0)
         min_std = np.min(std)
@@ -255,7 +346,7 @@ class KDEFunctional(Functional):
         if max_bw is None:
             max_bw = 1.06 * max_std / bw_factor
         
-        if algorithm == 'loo_cl':
+        if self.bandwidth_algorithm == 'loo_cl':
             """
             Минимизация расстояния Кульбака-Лейблера между ядерной оценкой и эмпирическим распределением.
             Эквивалентно максимизации функции правдоподобия методом убрать-один-элемент.
@@ -268,7 +359,7 @@ class KDEFunctional(Functional):
             
             self.bandwidth = minimize_recursive(function_, min_bw, max_bw, verbose=verbose)
         
-        elif algorithm == 'loo_lsq':
+        elif self.bandwidth_algorithm == 'loo_lsq':
             """
             Минимизация оценки среднеквадратической ошибки.
             """
@@ -286,13 +377,17 @@ class KDEFunctional(Functional):
                     2.0 * bandwidth
                 
             else:
+                # Пока что метод работает только для гауссова ядра.
                 raise NotImplementedError
                 
             def function_(bandwidth):
                 self.bandwidth = bandwidth
+                
+                # Линейное слагаемое - математическое ожидание оценки плотности.
                 mean, std = self.integrate(np.vectorize(lambda x : x))
                 linear_term = -2.0 * mean
                 
+                # Квадратичное слагаемое - сумма кросс-корреляций ядер.
                 radius = radius_func(bandwidth)
                 ind, dist = self.tree_.query_radius(self.tree_.data, radius, return_distance=True)
                 squared_term = []
@@ -300,6 +395,7 @@ class KDEFunctional(Functional):
                     squared_term.append(math.fsum(correlation_func(dist[index], bandwidth)))
                 squared_term = math.fsum(squared_term) / n_samples**2
                 
+                # Наивное вычисление.
                 #squared_term = 0.0
                 #for index in range(n_samples):
                 #    for jndex in range(index, n_samples):
@@ -319,43 +415,66 @@ class KLFunctional(Functional):
     Класс для вычисление функционалов методом Козаченко Леоненко.
     """
 
-    def __init__(self, *args, k_neighbours=1, algorithm='ball_tree', metric='euclidean',
-                 atol=0, rtol=0, breadth_first=True, leaf_size=40,
-                 metric_params=None, n_jobs=1):
+    def __init__(self, *args, k_neighbours=50, tree_algorithm='ball_tree',
+                 tree_params={'leaf_size': 40, 'metric': 'euclidean'}, n_jobs=1):
         """
-        Инициализация.
+        Инициализация экземпляра класса.
+        
+        Параметры
+        ---------
+        k_neighbours : int
+            Число ближайших соседей, по которым вычисляется оценка плотности.
+        tree_algorithm : str
+            Используемое дерево.
+        tree_params : dict
+            Параметры дерева.
+        n_jobs : int
+            Число потоков, используемых при вычислении оценки.
         """
         
+        assert k_neighbours > 0
         super().__init__(*args)
-
+        
         self.k_neighbours = k_neighbours
-        self.algorithm = algorithm
-        self.metric = metric
-        self.atol = atol
-        self.rtol = rtol
-        self.breadth_first = breadth_first
-        self.leaf_size = leaf_size
-        self.metric_params = metric_params
+        self.tree_algorithm = tree_algorithm
+        self.tree_params = tree_params
         self.n_jobs = n_jobs
         
+        self.weights = np.zeros(self.k_neighbours)
+        self.weights[0] = 1.0
+        #self.weights = np.ones(self.k_neighbours) / self.k_neighbours
+        
 
-    def fit(self, X, y=None, sample_weight=None):
+    def fit(self, X, y=None, sample_weight=None, fit_weights=True, verbose=0):
         """
-        Построить оценку плотности по данным.
+        Построить ядерную оценку плотности по данным.
 
-        X - данные образцов.
-        y - данные меток (игнорируются)
-        sample_weight - веса образцов.
+        Параметры
+        ---------
+        X : array
+            Данные образцов.
+        y : array
+            Данные меток (игнорируются).
+        sample_weight : array
+            Веса образцов (игнорируются).
+        fit_weights : bool
+            Требуется ли подбирать веса метода.
+        verbose : int
+            Подробность вывода.
         """
 
         assert len(X.shape) == 2
-        assert X.shape[0] >= 2
+        assert X.shape[0] >= self.k_neighbours
         self.data = X
         
-        if self.algorithm == 'ball_tree':
-            self.tree_ = BallTree(X, leaf_size=self.leaf_size, metric=self.metric)
+        if self.tree_algorithm == 'ball_tree':
+            self.tree_ = BallTree(X, **self.tree_params)
         else:
             raise NotImplementedError
+            
+        # Подбор весов.
+        if fit_weights:
+            self.set_optimal_weights(verbose=verbose)
         
         
     def get_loo_densities(self, outliers_atol=0.0, verbose=0):
@@ -363,34 +482,100 @@ class KLFunctional(Functional):
         Получение плотности в точках, на которых было произведено обучение.
         Применяется метод убрать-один-элемент.
         
-        outliers_atol - абсолютный порог для значения плотности,
-                        ниже которого точки отбрасываются как выбросы.
-        verbose       - подробность вывода.
+        Параметры
+        ---------
+        outliers_atol : float
+            Абсолютный порог для значения плотности,
+            ниже которого точки отбрасываются как выбросы.
+        verbose : int
+            Подробность вывода.
         """
         
         n_samples, dim = self.tree_.data.shape
         
-        # Число ближайших соседей.
-        _k_neighbours = min(self.k_neighbours, n_samples - 1)
-        
         # Получение _k_neighbours ближайших соседей.
-        dist, ind = self.tree_.query(self.tree_.data, _k_neighbours + 1, return_distance=True)
-        max_dist = dist[:,-1]
+        distances, indexes = self.tree_.query(self.tree_.data, self.k_neighbours + 1, return_distance=True)
+        distances = distances[:,1:]
         
         # Плотности.
         unit_ball_volume = ball_volume(dim)
-        psi_k = sum(1/n for n in range(1, _k_neighbours - 1)) - np.euler_gamma
-        densities = np.exp(psi_k) / (unit_ball_volume * np.power(max_dist, dim))
+        
+        #psi = np.array([sum(1/n for n in range(1, k - 1))] for k in range(self.k_neighbours)) - np.euler_gamma
+        psi = np.zeros(self.k_neighbours)
+        psi[0] = -np.euler_gamma
+        for index in range(1, self.k_neighbours):
+            psi[index] = psi[index - 1] + 1 /  index
+            
+        densities = np.exp(psi) / (unit_ball_volume * np.power(distances, dim))
         
         # Удаление статистических выбросов.
-        densities = densities[densities > outliers_atol]
-        n_samples = len(densities)
+        #densities = densities[densities > outliers_atol]
+        #n_samples = len(densities)
         
         # Если осталось меньше двух точек, возвращаем None.
-        if n_samples <= 1:
-            return None
+        #if n_samples <= 1:
+        #    return None
         
         # Нормировка.
         densities /= (n_samples - 1)
         
         return densities
+    
+
+    def set_optimal_weights(self, rcond=1e-6, zero_constraints=True, verbose=0):
+        """
+        Поиск оптимальных весов.
+        
+        Параметры
+        ---------
+        rcond: float
+            Порог регуляризации при нахождении вектора весов.
+        zero_constraints: bool
+            Добавлять ли ограничения, зануляющие некоторые веса.
+        verbose : int
+            Подробность вывода.
+        """
+        
+        n_samples, dim = self.tree_.data.shape
+        
+        if dim <= 4:
+            # В вырожденном случае используем стандартные веса.
+            self.weights = np.zeros(self.k_neighbours)
+            self.weights[0] = 1.0
+            
+        else:
+            # Составляем линейное ограничение
+            constraints = []
+
+            # Ограничение - сумма единиц.
+            constraints.append(np.ones(self.k_neighbours) / self.k_neighbours)
+
+            # Ограничения с гамма-функциями.
+            n_gamma_constraints = dim // 4
+            for k in range(1, n_gamma_constraints + 1):
+                constraints.append(
+                    #np.array([math.gamma(j + 2*k / dim) / math.gamma(j) for j in range(1, self.k_neighbours + 1)])
+                    np.exp(loggamma(np.arange(1, self.k_neighbours + 1) + 2 * k / dim) - \
+                           loggamma(np.arange(1, self.k_neighbours + 1)))
+                )
+                constraints[-1] /= np.linalg.norm(constraints[-1])
+                
+            # Ограничение отдельных элементов.
+            if zero_constraints:
+                nonzero = set(i * self.k_neighbours // dim - 1 for i in range(1, dim + 1))
+                for j in range(self.k_neighbours):
+                    if not j in nonzero:
+                        constraint = np.zeros(self.k_neighbours)
+                        constraint[j] = 1.0
+                        constraints.append(constraint)
+                    
+            constraints = np.vstack(constraints)
+            
+            # Правая часть.
+            rhs = np.zeros(constraints.shape[0])
+            rhs[0] = 1.0 / self.k_neighbours
+
+            self.weights = np.linalg.lstsq(constraints, rhs, rcond=rcond)[0]
+            #self.weights /= np.sum(self.weights)
+        
+        return self.weights

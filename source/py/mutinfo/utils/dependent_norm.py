@@ -9,7 +9,10 @@ def norm_corr_from_MI(mutual_information):
     Получение коэффициента корреляции для двух нормальных случайных величин
     по их взаимной информации.
 
-    mutual_information - взаимноая информация (в диапазоне [0.0; +inf))
+    Параметры
+    ---------
+    mutual_information : float
+        Взаимноая информация (в диапазоне [0.0; +inf)).
     """
 
     assert 0.0 <= mutual_information
@@ -20,11 +23,22 @@ def norm_corr_from_MI(mutual_information):
 def multivariate_normal_from_MI(X_dimension, Y_dimension, mutual_information,
                                 X_rotate = True, Y_rotate = True):
     """
-    Получение нормального случайного вектора размерности dimension_X + dimension_Y
-    с заданной взаимной информацией между первыми dimension_X и последними dimension_Y
+    Получение нормального случайного вектора размерности X_dimension + Y_dimension
+    с заданной взаимной информацией между первыми X_dimension и последними Y_dimension
     компонентами.
 
-    mutual_information - взаимноая информация (в диапазоне [0.0; +inf))
+    Параметры
+    ---------
+    X_dimension : int
+        Размерность первого случайного вектора.
+    Y_dimension : int
+        Размерность второго случайного вектора.
+    mutual_information : float
+        Взаимноая информация (в диапазоне [0.0; +inf)).
+    X_rotate : bool
+        Применять ли случайное вращение к первому вектору.
+    Y_rotate : bool
+        Применять ли случайное вращение ко второму вектору.
     """
 
     assert X_dimension >= 1

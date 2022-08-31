@@ -4,6 +4,7 @@ class TunableGaussianNoise(tf.keras.layers.Layer):
     """
     Настраиваемый слой аддитивного гауссова шума.
     """
+    
     def __init__(self, stddev, **kwargs):
         super(TunableGaussianNoise, self).__init__()
         self._name = kwargs['name']
