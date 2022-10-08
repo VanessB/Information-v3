@@ -14,7 +14,7 @@ class Functional:
     Класс для вычисление функционалов на основе оценки плотности.
     """
     
-    def __init__(self, atol=0.0, rtol=0.0):
+    def __init__(self, atol: float=0.0, rtol: float=0.0):
         """
         Инициализация экземпляра класса.
         
@@ -36,11 +36,11 @@ class Functional:
 
         Параметры
         ---------
-        X : array
+        X : array_like
             Данные образцов.
-        y : array
+        y : array_like
             Данные меток (игнорируются).
-        sample_weight : array
+        sample_weight : array_like
             Веса образцов.
         """
         
@@ -53,14 +53,14 @@ class Functional:
         
         Параметры
         ---------
-        X : array
+        X : array_like
             Набор точек.
         """
         
         raise NotImplementedError
         
         
-    def get_loo_densities(self, outliers_atol=0.0):
+    def get_loo_densities(self, outliers_atol: float=0.0):
         """
         Получение плотности в точках, на которых было произведено обучение.
         Применяется метод убрать-один-элемент.
@@ -75,7 +75,8 @@ class Functional:
         raise NotImplementedError
         
         
-    def integrate(self, func, outliers_atol=0.0, bootstrap_size=None, verbose=0):
+    def integrate(self, func: callable, outliers_atol: float=0.0,
+                  bootstrap_size: int=None, verbose: int=0):
         """
         Вычисление функционала методом убрать-один-элемент.
         
@@ -101,7 +102,7 @@ class Functional:
         
         if bootstrap_size is None:
             # Вычисление функционала простым усреднением.
-            values = self.get_values_(func, densities)
+            values = self._get_values(func, densities)
             
             # Среднее и дисперсия функционала.
             mean = math.fsum(values) / n_samples
@@ -112,7 +113,7 @@ class Functional:
             values = []
             for i in range(bootstrap_size):
                 values.append(
-                    math.fsum(self.get_values_(func, np.random.choice(densities, size=n_samples)) / n_samples)
+                    math.fsum(self._get_values(func, np.random.choice(densities, size=n_samples)) / n_samples)
                 )
 
             # Среднее и дисперсия функционала.      
@@ -122,7 +123,7 @@ class Functional:
         return mean, std
     
     
-    def get_values_(self, func, densities):
+    def _get_values(self, func: callable, densities):
         """
         Вычисление значений функции.
         
@@ -130,7 +131,7 @@ class Functional:
         ---------
         func : callable
             Интегрируемая функция.
-        densities : float
+        densities : array_like
             Вычисленные плотности.
         """
         
@@ -157,8 +158,9 @@ class KDEFunctional(Functional):
     Класс для вычисление функционалов на основе ядерной оценки плотности.
     """
 
-    def __init__(self, *args, kernel='gaussian', bandwidth_algorithm='loo_cl', tree_algorithm='ball_tree',
-                 tree_params={'leaf_size': 40, 'metric': 'euclidean'}, n_jobs=1):
+    def __init__(self, *args, kernel: str='gaussian', bandwidth_algorithm: str='loo_cl',
+                 tree_algorithm: str='ball_tree',
+                 tree_params: dict={'leaf_size': 40, 'metric': 'euclidean'}, n_jobs: int=1):
         """
         Инициализация экземпляра класса.
         
@@ -188,17 +190,18 @@ class KDEFunctional(Functional):
         self.n_jobs = n_jobs
 
 
-    def fit(self, X, y=None, sample_weight=None, fit_bandwidth=True, verbose=0):
+    def fit(self, X, y=None, sample_weight=None,
+            fit_bandwidth: bool=True, verbose: int=0):
         """
         Построить ядерную оценку плотности по данным.
 
         Параметры
         ---------
-        X : array
+        X : array_like
             Данные образцов.
-        y : array
+        y : array_like
             Данные меток (игнорируются).
-        sample_weight : array
+        sample_weight : array_like
             Веса образцов (игнорируются).
         fit_bandwidth : bool
             Требуется ли подбирать ширину окна.
@@ -206,7 +209,9 @@ class KDEFunctional(Functional):
             Подробность вывода.
         """
 
-        assert len(X.shape) == 2
+        if len(X.shape) != 2:
+            raise TypeError("X must be of shape (?,?)")
+            
         self.data = X
         
         if self.tree_algorithm == 'ball_tree':
@@ -219,7 +224,8 @@ class KDEFunctional(Functional):
             self.set_optimal_bandwidth(verbose=verbose)
             
             
-    def get_loo_densities(self, outliers_atol=0.0, parallel=True, n_parts=None, verbose=0):
+    def get_loo_densities(self, outliers_atol: float=0.0, parallel: bool=True,
+                          n_parts: int=None, verbose: int=0):
         """
         Получение плотности в точках, на которых было произведено обучение.
         Применяется метод убрать-один-элемент.
@@ -318,7 +324,8 @@ class KDEFunctional(Functional):
         return densities
 
 
-    def set_optimal_bandwidth(self, min_bw=None, max_bw=None, verbose=0):
+    def set_optimal_bandwidth(self, min_bw: float=None, max_bw: float=None,
+                              verbose: int=0):
         """
         Поиск оптимальной ширины окна.
         
@@ -415,8 +422,8 @@ class KLFunctional(Functional):
     Класс для вычисление функционалов методом Козаченко Леоненко.
     """
 
-    def __init__(self, *args, k_neighbours=50, tree_algorithm='ball_tree',
-                 tree_params={'leaf_size': 40, 'metric': 'euclidean'}, n_jobs=1):
+    def __init__(self, *args, k_neighbours: int=5, tree_algorithm: str='ball_tree',
+                 tree_params: dict={'leaf_size': 40, 'metric': 'euclidean'}, n_jobs: int=1):
         """
         Инициализация экземпляра класса.
         
@@ -432,7 +439,9 @@ class KLFunctional(Functional):
             Число потоков, используемых при вычислении оценки.
         """
         
-        assert k_neighbours > 0
+        if k_neighbours <= 0:
+            raise ValueError("Number of neighbours must be positive")
+            
         super().__init__(*args)
         
         self.k_neighbours = k_neighbours
@@ -445,17 +454,18 @@ class KLFunctional(Functional):
         #self.weights = np.ones(self.k_neighbours) / self.k_neighbours
         
 
-    def fit(self, X, y=None, sample_weight=None, fit_weights=True, verbose=0):
+    def fit(self, X, y=None, sample_weight=None, fit_weights: bool=True,
+            verbose: int=0):
         """
         Построить ядерную оценку плотности по данным.
 
         Параметры
         ---------
-        X : array
+        X : array_like
             Данные образцов.
-        y : array
+        y : array_like
             Данные меток (игнорируются).
-        sample_weight : array
+        sample_weight : array_like
             Веса образцов (игнорируются).
         fit_weights : bool
             Требуется ли подбирать веса метода.
@@ -463,8 +473,9 @@ class KLFunctional(Functional):
             Подробность вывода.
         """
 
-        assert len(X.shape) == 2
-        assert X.shape[0] >= self.k_neighbours
+        if len(X.shape) != 2 or X.shape[0] < self.k_neighbours:
+            raise TypeError("X must be of shape (?, >= k_neigbours)")
+            
         self.data = X
         
         if self.tree_algorithm == 'ball_tree':
@@ -477,7 +488,7 @@ class KLFunctional(Functional):
             self.set_optimal_weights(verbose=verbose)
         
         
-    def get_loo_densities(self, outliers_atol=0.0, verbose=0):
+    def get_loo_densities(self, outliers_atol: float=0.0, verbose: int=0):
         """
         Получение плотности в точках, на которых было произведено обучение.
         Применяется метод убрать-один-элемент.
@@ -522,7 +533,8 @@ class KLFunctional(Functional):
         return densities
     
 
-    def set_optimal_weights(self, rcond=1e-6, zero_constraints=True, verbose=0):
+    def set_optimal_weights(self, rcond: float=1e-6, zero_constraints: bool=True,
+                            verbose: int=0):
         """
         Поиск оптимальных весов.
         

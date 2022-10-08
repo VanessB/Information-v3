@@ -17,7 +17,8 @@ class EntropyEstimator:
     Класс-оценщик дифференциальной энтропии.
     """
 
-    def __init__(self, rescale=True, method='KDE', functional_params=None):
+    def __init__(self, rescale: bool=True, method: str='KDE',
+                 functional_params: dict=None):
         """
         Инициализация экземпляра класса.
         
@@ -29,28 +30,30 @@ class EntropyEstimator:
             Способ оценки значения функционала
               'KDE' - ядерная оценка плотности
               'KL'  - Козаченко-Леоненко
-        functional_params : dict
+        _functional_params : dict
             Параметры функционала.
         """
 
         self.rescale = rescale
-        self.scaling_matrix_ = None
-        self.scaling_delta_entropy_ = 0.0
+        self._scaling_matrix = None
+        self._scaling_delta_entropy = 0.0
         
         if method == 'KDE':
-            self.functional_ = KDEFunctional(**functional_params)
-        if method == 'KL':
-            self.functional_ = KLFunctional(**functional_params)
+            self._functional = KDEFunctional(**functional_params)
+        elif method == 'KL':
+            self._functional = KLFunctional(**functional_params)
+        else:
+            raise NotImplementedError(f"Method {method} is not implemented")
 
 
-    def fit(self, data, fit_scaling_matrix=True,
-            verbose=0, **kwargs):
+    def fit(self, data, fit_scaling_matrix: bool=True,
+            verbose: int=0, **kwargs):
         """
         Предобработка данных и подбор параметров оценщика функционала
 
         Параметры
         ---------
-        data : array
+        data : array_like
             Выборка из исследуемой случайной величины.
         fit_scaling_matrix : bool
             Вычислять ли матрицу масштабирования.
@@ -70,16 +73,16 @@ class EntropyEstimator:
                     cov_matrix = np.array([[cov_matrix]])
                 
                 # Получение масштабирующей матрицы по матрице ковариации.
-                self.scaling_matrix_ = get_scaling_matrix(cov_matrix)
-                self.scaling_delta_entropy_ = -0.5 * get_matrix_entropy(cov_matrix)
+                self._scaling_matrix = get_scaling_matrix(cov_matrix)
+                self._scaling_delta_entropy = -0.5 * get_matrix_entropy(cov_matrix)
 
-            data = data @ self.scaling_matrix_
+            data = data @ self._scaling_matrix
             
         # Оценщик функционала.
-        self.functional_.fit(data, **kwargs, verbose=verbose)
+        self._functional.fit(data, **kwargs, verbose=verbose)
 
             
-    def estimate(self, data, verbose=0):
+    def estimate(self, data, verbose: int=0) -> (float, float):
         """
         Оценка энтропии.
         
@@ -90,6 +93,6 @@ class EntropyEstimator:
         """
 
         # Сама оценка производится оценщиком функционала.
-        mean, std = self.functional_.integrate(np.log, verbose=verbose)
+        mean, std = self._functional.integrate(np.log, verbose=verbose)
 
-        return -mean - self.scaling_delta_entropy_, std
+        return -mean - self._scaling_delta_entropy, std

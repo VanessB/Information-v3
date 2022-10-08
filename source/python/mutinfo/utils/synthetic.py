@@ -2,36 +2,39 @@ import numpy as np
 from scipy.special import ndtr
 from .dependent_norm import multivariate_normal_from_MI
 
-def normal_to_uniform(X):
+def normal_to_uniform(X: np.array) -> np.array:
     """
     Гауссов случайный вектор с единичными дисперсиями в равномерное
     распределение на [0; 1]^dim.
     
     Параметры
     ---------
-    X : array
-        Выборка из многомерного нормального распределения размерности (N,dim)
+    X : numpy.array
+        Выборка из многомерного нормального распределения размерности (?,dim).
     """
 
     return ndtr(X)
 
 
-def normal_to_segment(X, min_length):
+def normal_to_segment(X: np.array, min_length: float) -> np.array:
     """
     Гауссов случайный вектор с единичными дисперсиями в координаты концов отрезка.
     Координаты концов распределены равномерно с учётом необходимости сохранения порядка.
     
     Параметры
     ---------
-    X : array
-        Выборка из многомерного нормального распределения размерности (N,2)
+    X : numpy.array
+        Выборка из многомерного нормального распределения размерности (?,2).
     min_length : float
         Минимальная длина отрезка.
     """
-
-    assert len(X.shape) == 2
-    assert X.shape[1] == 2
-    assert min_length < 1.0
+        
+    if len(X.shape) != 2 or X.shape[1] != 2:
+        raise TypeError("X array must have shape (?,2)")
+        
+    if not (0.0 <= min_length < 1.0):
+        raise ValueError("min_length must be in [0.0, 1.0)")
+        
     n_samples = X.shape[0]
 
     # Получение равномерно распределённых сэмплов.
@@ -50,15 +53,16 @@ def normal_to_segment(X, min_length):
     return coords
 
 
-def normal_to_rectangle_coords(X, min_width=0.0, max_width=1.0, min_height=0.0, max_height=1.0):
+def normal_to_rectangle_coords(X: np.array, min_width: float=0.0, max_width: float=1.0,
+                               min_height: float=0.0, max_height: float=1.0) -> np.array:
     """
     Гауссов случайный вектор с единичными дисперсиями в координаты точек прямоугольника.
     Координаты точек распределены равномерно с учётом необходимости сохранения порядка.
     
     Параметры
     ---------
-    X : array
-        Выборка из многомерного нормального распределения размерности (N,4)
+    X : numpy.array
+        Выборка из многомерного нормального распределения размерности (?,4).
     min_width : float
         Минимальная ширина прямоугольника.
     max_width : float
@@ -69,8 +73,8 @@ def normal_to_rectangle_coords(X, min_width=0.0, max_width=1.0, min_height=0.0, 
         Максимальная высота прямоугольника.
     """
 
-    assert len(X.shape) == 2
-    assert X.shape[1] == 4
+    if len(X.shape) != 2 or X.shape[1] != 4:
+        raise TypeError("X array must have shape (?,4)")
 
     coords = np.zeros_like(X)
     coords[:,0:2] = normal_to_segment(X[:,0:2], min_width / max_width) * max_width
@@ -79,22 +83,23 @@ def normal_to_rectangle_coords(X, min_width=0.0, max_width=1.0, min_height=0.0, 
     return coords
 
 
-def rectangle_coords_to_rectangles(coords, img_width, img_height):
+def rectangle_coords_to_rectangles(coords: np.array, img_width: float, img_height: float) -> np.array:
     """
     Координаты углов прямоугольников в изображения прямоугольников.
     
     Параметры
     ---------
-    coords : array
-        Выборка координат прямоугольников размерности (N,4)
+    coords : numpy.array
+        Выборка координат прямоугольников размерности (?,4).
     img_width : float
         Ширина изображения.
     img_height : float
         Высота изображения.
     """
 
-    assert len(coords.shape) == 2
-    assert coords.shape[1] == 4
+    if len(coords.shape) != 2 or coords.shape[1] != 4:
+        raise TypeError("coords array must have shape (?,4)")
+        
     n_samples = coords.shape[0]
 
     # Непосредственная генерация прямоугольников.

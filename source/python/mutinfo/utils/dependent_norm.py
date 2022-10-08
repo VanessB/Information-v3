@@ -4,7 +4,7 @@ from scipy.stats import ortho_group
 from scipy.linalg import block_diag
 
 
-def norm_corr_from_MI(mutual_information):
+def norm_corr_from_MI(mutual_information: float) -> float:
     """
     Получение коэффициента корреляции для двух нормальных случайных величин
     по их взаимной информации.
@@ -15,13 +15,14 @@ def norm_corr_from_MI(mutual_information):
         Взаимноая информация (в диапазоне [0.0; +inf)).
     """
 
-    assert 0.0 <= mutual_information
+    if mutual_information < 0.0:
+        raise ValueError("Mutual information must be non-negative")
 
     return np.sqrt(1 - np.exp(- 2.0 * mutual_information))
 
 
-def multivariate_normal_from_MI(X_dimension, Y_dimension, mutual_information,
-                                X_rotate = True, Y_rotate = True):
+def multivariate_normal_from_MI(X_dimension: int, Y_dimension: int, mutual_information: float,
+                                X_rotate: bool=True, Y_rotate: bool=True) -> multivariate_normal:
     """
     Получение нормального случайного вектора размерности X_dimension + Y_dimension
     с заданной взаимной информацией между первыми X_dimension и последними Y_dimension
@@ -41,8 +42,8 @@ def multivariate_normal_from_MI(X_dimension, Y_dimension, mutual_information,
         Применять ли случайное вращение ко второму вектору.
     """
 
-    assert X_dimension >= 1
-    assert Y_dimension >= 1
+    if X_dimension < 1 or Y_dimension < 1:
+        raise ValueError("X and Y dimensions must be at least 1.")
 
     # Разбивка зависимости равномерно по компонентам.
     min_dim = min(X_dimension, Y_dimension)
@@ -52,9 +53,9 @@ def multivariate_normal_from_MI(X_dimension, Y_dimension, mutual_information,
     # Построение базовой матрицы ковариации.
     corr_coef = norm_corr_from_MI(MI_per_dim)
     cov_matrix = np.identity(sum_dim)
-    for component in range(min_dim):
-        cov_matrix[component][component + X_dimension] = corr_coef
-        cov_matrix[component + X_dimension][component] = corr_coef
+    for index in range(min_dim):
+        cov_matrix[index][index + X_dimension] = corr_coef
+        cov_matrix[index + X_dimension][index] = corr_coef
 
     # Случайное вращение внутри каждой группы.
     if X_dimension > 1 and X_rotate:

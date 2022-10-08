@@ -2,7 +2,9 @@ import math
 import numpy as np
 
 
-def minimize_recursive(function, left, right, n_points=7, atol=0.0, rtol=1e-2, verbose=0):
+def minimize_recursive(function: callable, left: float, right: float,
+                       n_points: int=7, atol: float=0.0, rtol: float=1e-2,
+                       verbose: int=0) -> float:
     """
     Рекурсивный поиск минимума функции.
     
@@ -48,7 +50,7 @@ def minimize_recursive(function, left, right, n_points=7, atol=0.0, rtol=1e-2, v
                 return grid[best_index]
             
             
-def ball_volume(dim, radius=1.0):
+def ball_volume(dim: int, radius: float=1.0) -> float:
     """
     Объём многомерного шара.
     
