@@ -83,7 +83,7 @@ def normal_to_rectangle_coords(X: np.array, min_width: float=0.0, max_width: flo
     return coords
 
 
-def rectangle_coords_to_rectangles(coords: np.array, img_width: float, img_height: float) -> np.array:
+def rectangle_coords_to_rectangles(coords: np.array, img_width: int, img_height: int) -> np.array:
     """
     Координаты углов прямоугольников в изображения прямоугольников.
     
@@ -117,4 +117,38 @@ def rectangle_coords_to_rectangles(coords: np.array, img_width: float, img_heigh
 
                 images[sample_index][x_index][y_index] = dx * dy
 
+    return images
+
+
+def params_to_2d_distribution(params: np.array, func: callable,
+                              img_width: int, img_height: int) -> np.array:
+    """
+    Распределение и параметры распределения в изображения распределения.
+    
+    Параметры
+    ---------
+    params : numpy.array
+        Выборка параметров распределения.
+    func : callable
+        Функция, задающая распределение.
+    img_width : float
+        Ширина изображения.
+    img_height : float
+        Высота изображения.
+    """
+    
+    n_samples = params.shape[0]
+    
+    X, Y = np.meshgrid(np.linspace(0.0, 1.0, img_width), np.linspace(0.0, 1.0, img_height))
+    X = X[None,:]
+    Y = Y[None,:]
+    
+    images = func(X, Y, params)
+    
+    #images = np.zeros((n_samples, img_width, img_height))
+    #for sample_index in range(n_samples):
+    #    for x in range(img_width):
+    #        for y in range(img_height):
+    #            images[sample_index][x][y] = func(x / (img_width - 1), y / (img_height - 1), params[sample_index])
+                
     return images

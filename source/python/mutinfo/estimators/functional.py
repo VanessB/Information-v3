@@ -282,7 +282,7 @@ class KDEFunctional(Functional):
             }
             
             # Параллельное вычисление.
-            densities = Parallel(n_jobs=min(n_parts, self.n_jobs), verbose=verbose, batch_size=1)(
+            densities = Parallel(n_jobs=min(n_parts, self.n_jobs), verbose=verbose, batch_size=1, max_nbytes=None)(
                     delayed(_loo_step)(
                         self.tree_,
                         self.bandwidth,
@@ -303,7 +303,7 @@ class KDEFunctional(Functional):
                 kernel=self.kernel,
                 atol=self.atol,
                 rtol=self.rtol,
-                breadth_first=self.breadth_first,
+                breadth_first=True, #self.breadth_first,
                 return_log=False
             )
 

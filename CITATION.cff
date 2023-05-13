@@ -1,0 +1,26 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: Package for information-theoretic data analysis
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Ivan
+    family-names: Butakov
+    email: butakov.id@phsyetch.edu
+    orcid: 'https://orcid.org/0000-0002-0424-6695'
+repository-code: 'https://github.com/VanessB/Information-v3'
+abstract: >-
+  Package for information-theoretic data analysis via
+  entropy estimation and lossy compression
+keywords:
+  - machine learning
+  - information theory
+  - mutual information
+  - entropy
+  - information bottleneck
+  - deep learning
+license: GPL-3.0

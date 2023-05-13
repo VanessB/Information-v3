@@ -1,13 +1,10 @@
-# Information v3
-Модуль для изучения наборов данных и работы нейронных сетей методами теории информации.
+# Mutinfo
+[Russian/Русский](./README_ru.md)
+An information-theoretic framework to study datasets and neural networks.
 
-## Задачи
-- Оценка энтропии набора данных и его скрытого представления.
-- Оценка размерности набора данных и его скрытого представления.
-- Оценка взаимной информации.
-- Изучение процесса обучения нейронных сетей.
-
-## Реализовано
-- [x] KDE-эстиматоры для взаимной информации.
-- [x] KL-эстиматоры для взаимной информации.
-- [ ] Framework для оценки взаимной информации методом сжатия с потерями.
+## Featires
+- [x] Kernel Density Estimation (maximum likelyhood and MSE) mutual information estimators.
+- [x] Kozachenko-Leonenko (original and weighted) mutual information estimators.
+- [x] Framework for mutual information estimation via lossy compression.
+- [x] Synthetic datasets with predefined information-theoretic quantities.
+- [X] Information bottleneck experiments with neural networks.

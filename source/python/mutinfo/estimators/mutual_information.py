@@ -8,7 +8,6 @@ from .entropy import EntropyEstimator
 class MutualInfoEstimator:
     """
     Класс-эстиматор взаимной информации.
-
     """
 
     def __init__(self, X_is_discrete: bool=False, Y_is_discrete: bool=False,
@@ -133,19 +132,19 @@ class MutualInfoEstimator:
             raise ValueError("X and Y must have the same length")
 
         if not self._X_is_discrete and not self._Y_is_discrete:
-            return self.estimate_cont_cont_(X, Y, verbose=verbose)
+            return self._estimate_cont_cont(X, Y, verbose=verbose)
 
         elif self._X_is_discrete and not self._Y_is_discrete:
-            return self.estimate_cont_disc_(Y, X, self._Y_entropy_estimator, verbose=verbose)
+            return self._estimate_cont_disc(Y, X, self._Y_entropy_estimator, verbose=verbose)
 
         elif not self._X_is_discrete and self._Y_is_discrete:
-            return self.estimate_cont_disc_(X, Y, self._X_entropy_estimator, verbose=verbose)
+            return self._estimate_cont_disc(X, Y, self._X_entropy_estimator, verbose=verbose)
 
         else:
-            return self.estimate_disc_disc_(X, Y, verbose=verbose)
+            return self._estimate_disc_disc(X, Y, verbose=verbose)
 
 
-    def estimate_cont_cont_(self, X, Y, verbose: int=0):
+    def _estimate_cont_cont(self, X, Y, verbose: int=0):
         """
         Оценка в случае, когда обе случайные величины непрерывные.
 
@@ -174,7 +173,7 @@ class MutualInfoEstimator:
         return (H_X + H_Y - H_X_Y, H_X_err + H_Y_err + H_X_Y_err)
 
 
-    def estimate_cont_disc_(self, X, Y, X_entropy_estimator: EntropyEstimator,
+    def _estimate_cont_disc(self, X, Y, X_entropy_estimator: EntropyEstimator,
                             verbose: int=0):
         """
         Оценка в случае, когда X непрерывен, а Y дискретен.
@@ -214,7 +213,6 @@ class MutualInfoEstimator:
                 print("Оценка энтропии для непрерывной случайной величины при условии дискретной")
             X_mid_y_entropy_estimator = EntropyEstimator(**self.entropy_estimator_params)
             X_mid_y_entropy_estimator.fit(X_mid_y, verbose=verbose)
-            #X_mid_y_entropy_estimator.best_estimator_.set_params(**X_entropy_estimator.best_estimator_.get_params())
             H_X_mid_y[y] = X_mid_y_entropy_estimator.estimate(X_mid_y, verbose=verbose)
 
         # Итоговая условная энтропия для X.
@@ -224,7 +222,7 @@ class MutualInfoEstimator:
         return (H_X - cond_H_X, H_X_err + cond_H_X_err)
 
 
-    def estimate_disc_disc_(self, X, Y, verbose=0):
+    def _estimate_disc_disc(self, X, Y, verbose: int=0):
         """
         Оценка в случае, когда обе случайные величины дискретные.
 

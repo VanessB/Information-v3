@@ -1,10 +1,7 @@
 # Байткоды и кэши (Python)
 __pycache__/
 *.py[cod]
-*.swp
 *$py.class
-
-*.egg-info
 
 # Jupyter Notebook
 .ipynb_checkpoints
@@ -12,5 +9,4 @@ __pycache__/
 # Данные и билды
 data
 build
-
-test.py
+.cache
