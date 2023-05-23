@@ -6,61 +6,61 @@ from mutinfo.torch.layers import AdditiveGaussianNoise
 
 class Classifier(torch.nn.Module):
     """
-    Свёрточный классификатор.
+    Convolutional classifier.
     """
     
     def __init__(self, sigma: float=0.1):
         super().__init__()
         self.sigma = sigma
         
-        # Шум.
+        # Noise.
         self.dropout = torch.nn.Dropout(0.1)
         self.agn = AdditiveGaussianNoise(sigma, enabled_on_inference=True)
         
-        # Активации.
+        # Activations.
         self.activation = torch.nn.LeakyReLU()
         self.logsoftmax = torch.nn.LogSoftmax(dim=-1)
         
-        # Свёртки.
+        # Convolutions.
         #torch.nn.utils.parametrizations.spectral_norm()
         self.conv2d_1 = torch.nn.Conv2d(1, 8, kernel_size=3)
         self.conv2d_2 = torch.nn.Conv2d(8, 16, kernel_size=3)
         self.conv2d_3 = torch.nn.Conv2d(16, 32, kernel_size=3)
         self.maxpool2d = torch.nn.MaxPool2d((2,2))
         
-        # Полносвязные слои.
+        # Dense.
         self.linear_1 = torch.nn.Linear(32, 32)
         self.linear_2 = torch.nn.Linear(32, 10)
 
 
     def forward(self, x: torch.tensor, all_layers: bool=False) -> torch.tensor:
-        # Свёртка №1
+        # Convolution №1
         x = self.dropout(x)
         x = self.agn(x)
         x = self.conv2d_1(x)
         x = self.maxpool2d(x)
         layer_1 = self.activation(x)
         
-        # Свёртка №2
+        # Convolution №2
         x = self.dropout(layer_1)
         x = self.agn(x)
         x = self.conv2d_2(x)
         x = self.maxpool2d(x)
         layer_2 = self.activation(x)
         
-        # Свёртка №3
+        # Convolution №3
         x = self.dropout(layer_2)
         x = self.agn(x)
         x = self.conv2d_3(x)
         x = self.maxpool2d(x)
         layer_3 = self.activation(x)
         
-        # Полносвязный слой №1
+        # Dense №1
         x = self.agn(torch.flatten(layer_3, 1))
         x = self.linear_1(x)
         layer_4 = self.activation(x)
         
-        # Полносвязный слой №2
+        # Dense №2
         x = self.agn(layer_4)
         x = self.linear_2(x)
         layer_5 = self.logsoftmax(x)
@@ -82,14 +82,14 @@ class Classifier(torch.nn.Module):
 
 def evaluate_classifier(classifier, dataloader, classifier_loss, device) -> (float, float):
     """
-    Подсчёт метрик для классификатора.
+    Calculate metrics for the classifier.
     """
     
-    # Выход из режима обучения.
+    # Exit training mode.
     was_in_training = classifier.training
     classifier.eval()
     
-    # Векторы классов и предсказаний.
+    # Targets and predictions.
     y_all = []
     y_pred_all = []
     
@@ -116,7 +116,7 @@ def evaluate_classifier(classifier, dataloader, classifier_loss, device) -> (flo
     y_all = np.concatenate(y_all)
     roc_auc = roc_auc_score(y_all, y_pred_all, multi_class='ovo')
         
-    # Возвращение модели к исходному режиму.
+    # Return to the original mode.
     classifier.train(was_in_training)
     
     return avg_loss, roc_auc

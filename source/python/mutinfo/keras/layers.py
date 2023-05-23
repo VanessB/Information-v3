@@ -2,7 +2,7 @@ import tensorflow.compat.v2 as tf
 
 class TunableGaussianNoise(tf.keras.layers.Layer):
     """
-    Настраиваемый слой аддитивного гауссова шума.
+    Tunable layer for additive Gaussian noise.
     """
     
     def __init__(self, stddev, **kwargs):

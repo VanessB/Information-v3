@@ -2,30 +2,21 @@ import torch
 
 class AdditiveGaussianNoise(torch.nn.Module):
     """
-    Аддитивный гауссов шум.
-
-    Параметры
-    ---------
-    sigma : float, optional
-        Стандартное отклонение аддитивного гауссова шума.
-    relative_scale : bool, optional
-        Скалировать ли шум входными значениями?
-    enabled_on_inference : bool, optional
-        Добавляется ли шум вне обучения.
+    Additive Gaussian noise.
     """
 
     def __init__(self, sigma : float=0.1, relative_scale : bool=True, enabled_on_inference : bool=False):
         """
-        Конструктор класса.
+        Initialization.
 
-        Параметры
-        ---------
+        Parameters
+        ----------
         sigma : float, optional
-            Стандартное отклонение аддитивного гауссова шума.
+            Standard deviation of additive Gaussian noise.
         relative_scale : bool, optional
-            Скалировать ли шум входными значениями?
+            Scale the noise to preserve noise-to-signal ratio.
         enabled_on_inference : bool, optional
-            Добавляется ли шум вне обучения.
+            Inject noise on inference.
         """
         
         super().__init__()
@@ -33,11 +24,11 @@ class AdditiveGaussianNoise(torch.nn.Module):
         self.relative_scale = relative_scale
         self.enabled_on_inference = enabled_on_inference
         
-        # Отдельный параметр для шума.
-        # Нужен для того, чтобы генерировать шум сразу на нужном устройстве.
+        # A separate parameter for noise.
+        # Needed in order to generate noise on the desired device.
         #self.noise = torch.nn.Parameter(torch.tensor(0.0, dtype=torch.float32))
         #self.noise.requires_grad_(False)
-        self.register_buffer('noise', torch.tensor(0.0, dtype=torch.float32))  # Предпочтительней в случае нескольких устройств.
+        self.register_buffer('noise', torch.tensor(0.0, dtype=torch.float32))  # Is preferable in case of multiple devices.
         
 
     def forward(self, x):

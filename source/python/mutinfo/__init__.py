@@ -1,9 +1,9 @@
 """
-Бутаков И.Д., Маланчук С. В., Неопрятная А. М., Толмачев А. Д., Фролов А. А.
-Модуль для теортеико-информационного анализа.
+Butakov I.D., Malanchuk S.V., Neopryatnaya A.M., Tolmachev A.D., Frolov A.A., Andreev K.M.
+Module for information-theoretic analysis.
 
-estimators - оценщики энтропии и взаимной информации.
-utils      - вспомогательные подмодули.
+estimators - entropy and mutual information estimators.
+utils - auxiliary submodules.
 """
 
 __name__ = "Mutual information toolbox"

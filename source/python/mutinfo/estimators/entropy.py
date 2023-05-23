@@ -1,8 +1,9 @@
 """
-Реализация оценщика энтропии.
+Entropy estimators implementation.
 
-При оценке энтропии требуется отнормировать данные, подобрать параметры для
-численного интегрирования и проинтегрировать логарифм плотности вероятности.
+Entropy estimation requires normalizing the data (optionaly), parameters
+selection and numerical integration of the logarithm of
+the probability density function.
 """
 
 import math
@@ -14,24 +15,24 @@ from ..utils.matrices import get_scaling_matrix, get_matrix_entropy
 
 class EntropyEstimator:
     """
-    Класс-оценщик дифференциальной энтропии.
+    Class for entopy estimation.
     """
 
     def __init__(self, rescale: bool=True, method: str='KDE',
                  functional_params: dict=None):
         """
-        Инициализация экземпляра класса.
+        Initialization.
         
-        Параметры
-        ---------
+        Parameters
+        ----------
         rescale : bool
-            Требуется ли приводить данные к отмасштабированному нескоррелированному виду.
+            Enables data normalization step.
         method : str
-            Способ оценки значения функционала
-              'KDE' - ядерная оценка плотности
-              'KL'  - Козаченко-Леоненко
+            PDF estimation method
+              'KDE' - kernel density estimation
+              'KL'  - Kozachenko-Leonenko
         _functional_params : dict
-            Параметры функционала.
+            Additional parameters passed to the functional evaluator.
         """
 
         self.rescale = rescale
@@ -49,50 +50,51 @@ class EntropyEstimator:
     def fit(self, data, fit_scaling_matrix: bool=True,
             verbose: int=0, **kwargs):
         """
-        Предобработка данных и подбор параметров оценщика функционала
+        Data preprocessing and selection of functional evaluator parameters.
 
-        Параметры
-        ---------
+        Parameters
+        ----------
         data : array_like
-            Выборка из исследуемой случайной величины.
+            I.i.d. samples from the random variable.
         fit_scaling_matrix : bool
-            Вычислять ли матрицу масштабирования.
+            Fit matrix for data normalization.
         fit_bandwidth : bool
-            Подобирать ли оптимальную ширину окна (только для KDE-функционала).
+            Find optimal bandwidth (KDE only).
         verbose : int
-            Подробность вывода.
+            Output verbosity.
         """
 
-        # Нормировка данных.
+        # Data normalization.
         if self.rescale:
             if fit_scaling_matrix:
-                # Матрица ковариации (требуется для нормировки).
-                # Учитывается, что в случае одномерных данных np.cov возвращает число.
+                # Covariance matrix (required for normalization).
+                # It is taken into account that in the case of one-dimensional data,
+                # np.cov returns a number.
                 cov_matrix = np.cov(data, rowvar=False)
                 if data.shape[1] == 1:
                     cov_matrix = np.array([[cov_matrix]])
                 
-                # Получение масштабирующей матрицы по матрице ковариации.
+                # Getting the scaling matrix from the covariance matrix.
                 self._scaling_matrix = get_scaling_matrix(cov_matrix)
                 self._scaling_delta_entropy = -0.5 * get_matrix_entropy(cov_matrix)
 
             data = data @ self._scaling_matrix
             
-        # Оценщик функционала.
+        # Functional evaluator.
         self._functional.fit(data, **kwargs, verbose=verbose)
 
             
     def estimate(self, data, verbose: int=0) -> (float, float):
         """
-        Оценка энтропии.
+        Entropy estimation.
         
-        Параметры
-        ---------
+        Parameters
+        ----------
         verbose : int
-            Подробность вывода.
+            Output verbosity.
         """
 
-        # Сама оценка производится оценщиком функционала.
+        # The evaluation itself is performed by the functional evaluator.
         mean, std = self._functional.integrate(np.log, verbose=verbose)
 
         return -mean - self._scaling_delta_entropy, std

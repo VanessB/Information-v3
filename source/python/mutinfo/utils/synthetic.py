@@ -4,13 +4,13 @@ from .dependent_norm import multivariate_normal_from_MI
 
 def normal_to_uniform(X: np.array) -> np.array:
     """
-    Гауссов случайный вектор с единичными дисперсиями в равномерное
-    распределение на [0; 1]^dim.
+    Map Gaussian random vector with unit variance to a uniform
+    distribution on the [0; 1]^dim.
     
-    Параметры
-    ---------
+    Parameters
+    ----------
     X : numpy.array
-        Выборка из многомерного нормального распределения размерности (?,dim).
+        Samples from a multivariate normal distribution, shape: (?,dim).
     """
 
     return ndtr(X)
@@ -18,15 +18,15 @@ def normal_to_uniform(X: np.array) -> np.array:
 
 def normal_to_segment(X: np.array, min_length: float) -> np.array:
     """
-    Гауссов случайный вектор с единичными дисперсиями в координаты концов отрезка.
-    Координаты концов распределены равномерно с учётом необходимости сохранения порядка.
+    Map Gaussian random vector with unit variance to segments.
+    The coordinates of the ends are distributed uniformly, preserving order.
     
-    Параметры
-    ---------
+    Parameters
+    ----------
     X : numpy.array
-        Выборка из многомерного нормального распределения размерности (?,2).
+        Samples from a multivariate normal distribution, shape: (?,2).
     min_length : float
-        Минимальная длина отрезка.
+        Minimum length of the segment.
     """
         
     if len(X.shape) != 2 or X.shape[1] != 2:
@@ -37,16 +37,16 @@ def normal_to_segment(X: np.array, min_length: float) -> np.array:
         
     n_samples = X.shape[0]
 
-    # Получение равномерно распределённых сэмплов.
+    # Obtaining uniformly distributed samples.
     coords = normal_to_uniform(X)
 
-    # Первое число - координата левого конца.
-    # Она должна быть распределена линейно от нуля до 1.0 - min_length
+    # The first number is the left end.
+    # It is uniformly distributed from `0.0` to `1.0 - min_length`.
     coords[:,0] = (1.0 - min_length) * (1.0 - np.sqrt(1.0 - coords[:,0]))
 
-    # Последнее число - координата правого конца.
-    # При фиксированной первой координате она должна быть распределена
-    # равномерно от координаты левого конца плюс min_length до 1.
+    # The last number is the right end.
+    # Given the left end, it is uniformly distributed from the left end plus
+    # `min_length` to 1.0.
     coords[:,1] *= 1.0 - coords[:,0] - min_length
     coords[:,1] += coords[:,0] + min_length
 
@@ -56,21 +56,21 @@ def normal_to_segment(X: np.array, min_length: float) -> np.array:
 def normal_to_rectangle_coords(X: np.array, min_width: float=0.0, max_width: float=1.0,
                                min_height: float=0.0, max_height: float=1.0) -> np.array:
     """
-    Гауссов случайный вектор с единичными дисперсиями в координаты точек прямоугольника.
-    Координаты точек распределены равномерно с учётом необходимости сохранения порядка.
+    Map Gaussian random vector with unit variance to rectangle parameters.
+    The coordinates of the corners are distributed uniformly, preserving order.
     
     Параметры
     ---------
     X : numpy.array
-        Выборка из многомерного нормального распределения размерности (?,4).
+        Samples from a multivariate normal distribution, shape: (?,4).
     min_width : float
-        Минимальная ширина прямоугольника.
+        Minimum width of the rectangle.
     max_width : float
-        Максимальная ширина прямоугольника.
+        Maximum width of the rectangle.
     min_height : float
-        Минимальная высота прямоугольника.
+        Minimum height of the rectangle.
     max_height : float
-        Максимальная высота прямоугольника.
+        Maximum height of the rectangle.
     """
 
     if len(X.shape) != 2 or X.shape[1] != 4:
@@ -85,16 +85,16 @@ def normal_to_rectangle_coords(X: np.array, min_width: float=0.0, max_width: flo
 
 def rectangle_coords_to_rectangles(coords: np.array, img_width: int, img_height: int) -> np.array:
     """
-    Координаты углов прямоугольников в изображения прямоугольников.
+    Map coordinates of rectangles to rasterized images of rectangles.
     
-    Параметры
-    ---------
+    Parameters
+    ----------
     coords : numpy.array
-        Выборка координат прямоугольников размерности (?,4).
+        Coordinates of rectangles, shape: (?,4).
     img_width : float
-        Ширина изображения.
+        Image width.
     img_height : float
-        Высота изображения.
+        Image height.
     """
 
     if len(coords.shape) != 2 or coords.shape[1] != 4:
@@ -102,14 +102,14 @@ def rectangle_coords_to_rectangles(coords: np.array, img_width: int, img_height:
         
     n_samples = coords.shape[0]
 
-    # Непосредственная генерация прямоугольников.
+    # Images generation.
     images = np.zeros((n_samples, img_width, img_height))
     for sample_index in range(n_samples):
-        # Преобразование должно быть хотя бы кусочно-гладким.
-        # Для этого каждый пиксель закрашиваем настолько, сколько в нём закрыто площади.
+        # The mapping must be piecewise smooth. To achieve this, we color each
+        # pixel according to the covered area of the rectangle.
         floor_coords = np.floor(coords[sample_index]).astype(int)
 
-        # Не самый оптимальный способ. Стоит переделать хотя бы заливку.
+        # Naive and slow.
         for x_index in range(floor_coords[0], floor_coords[1] + 1):
             for y_index in range(floor_coords[2], floor_coords[3] + 1):
                 dx = min(coords[sample_index][1], x_index + 1) - max(coords[sample_index][0], x_index)
@@ -123,32 +123,27 @@ def rectangle_coords_to_rectangles(coords: np.array, img_width: int, img_height:
 def params_to_2d_distribution(params: np.array, func: callable,
                               img_width: int, img_height: int) -> np.array:
     """
-    Распределение и параметры распределения в изображения распределения.
+    Smooth 2D parametric function and corresponding parameters to rasterized
+    images of 2D-plot.
     
-    Параметры
-    ---------
+    Parameters
+    ----------
     params : numpy.array
-        Выборка параметров распределения.
+        Samples of parameters.
     func : callable
-        Функция, задающая распределение.
+        Parametric function, the graph of which is used to draw images.
     img_width : float
-        Ширина изображения.
+        Image width.
     img_height : float
-        Высота изображения.
+        Image height.
     """
     
     n_samples = params.shape[0]
     
     X, Y = np.meshgrid(np.linspace(0.0, 1.0, img_width), np.linspace(0.0, 1.0, img_height))
-    X = X[None,:]
-    Y = Y[None,:]
+    X = X[np.newaxis,:]
+    Y = Y[np.newaxis,:]
     
     images = func(X, Y, params)
-    
-    #images = np.zeros((n_samples, img_width, img_height))
-    #for sample_index in range(n_samples):
-    #    for x in range(img_width):
-    #        for y in range(img_height):
-    #            images[sample_index][x][y] = func(x / (img_width - 1), y / (img_height - 1), params[sample_index])
                 
     return images

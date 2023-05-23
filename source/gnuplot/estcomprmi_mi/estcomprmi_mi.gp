@@ -1,6 +1,6 @@
 load "../common.gp"
 
-set title "Взаимная информация (прямоугольники)"
+set title "Mutual information"
 set xlabel "I(X,Y)"
 set ylabel "I(X,Y)"
 
@@ -12,5 +12,5 @@ compressed_file_path = "compressed.csv"
 set output "plot" . extension
 
 set style fill transparent solid 0.2 noborder
-plot [*:*] file_path using 1:1 lc "red" lw 2 t "истинное значение", file_path using 1:($2 - $3):($2 + $3) with filledcurves lc "web-blue" notitle, file_path using 1:2 lc "blue" lw 2 t "оценка (без сжатия)", \
-           compressed_file_path using 1:($2 - $3):($2 + $3) with filledcurves lc "web-green" notitle, compressed_file_path using 1:2 lc "green" lw 2 t "оценка (сжатие)"
+plot [*:*] file_path using 1:1 lc "red" lw 2 t "true value", file_path using 1:($2 - $3):($2 + $3) with filledcurves lc "web-blue" notitle, file_path using 1:2 lc "blue" lw 2 t "estimate (no compression)", \
+           compressed_file_path using 1:($2 - $3):($2 + $3) with filledcurves lc "web-green" notitle, compressed_file_path using 1:2 lc "green" lw 2 t "estimate (compressed)"

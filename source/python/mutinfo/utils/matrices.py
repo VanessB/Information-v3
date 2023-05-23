@@ -4,13 +4,12 @@ from scipy.linalg import sqrtm
 
 def get_scaling_matrix(cov_matrix: np.array) -> np.array:
     """
-    Получение линейного преобразования, под действием которого ковариационная матрица
-    переходит в единичную.
+    Obtaining a linear normalization matrix.
 
-    Параметры
-    ---------
+    Parameters
+    ----------
     cov_matrix : numpy.array
-        Ковариационная матрица.
+        Covariance matrix.
     """
 
     return np.linalg.inv(sqrtm(cov_matrix))
@@ -18,12 +17,12 @@ def get_scaling_matrix(cov_matrix: np.array) -> np.array:
 
 def get_matrix_entropy(matrix: np.array) -> float:
     """
-    Вычисление изменения энтропии при линейном преобразовании, заданном матрицей.
+    Calculate entropy alternation under a linear mapping.
 
-    Параметры
-    ---------
+    Parameters
+    ----------
     matrix : numpy.array
-        Матрица преобразования.
+        Matrix of linear mapping.
     """
 
     sign, logdet = np.linalg.slogdet(matrix)

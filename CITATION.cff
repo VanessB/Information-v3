@@ -2,7 +2,7 @@
 # Visit https://bit.ly/cffinit to generate yours today!
 
 cff-version: 1.2.0
-title: Package for information-theoretic data analysis
+title: Information-theoretic data analysis framework
 message: >-
   If you use this software, please cite it using the
   metadata from this file.
@@ -12,10 +12,28 @@ authors:
     family-names: Butakov
     email: butakov.id@phsyetch.edu
     orcid: 'https://orcid.org/0000-0002-0424-6695'
+  - given-names: Alexander
+    family-names: Tolmachev
+    email: tolmachev.ad@phystech.edu
+    orcid: 'https://orcid.org/0009-0006-7711-3005'
+  - given-names: Sofia
+    family-names: Malanchuk
+    email: malanchuk.sv@phystech.edu
+  - given-names: Anna
+    family-names: Neopryatnaya
+    email: neopriatnaia.am@phystech.edu
+  - given-names: Alexey
+    family-names: Frolov
+    email: al.frolov@skoltech.ru
+    orcid: 'https://orcid.org/0000-0002-6734-0179'
+  - email: k.andreev@skoltech.ru
+    given-names: Kirill
+    family-names: Andreev
+    orcid: 'https://orcid.org/0000-0002-2920-2015'
 repository-code: 'https://github.com/VanessB/Information-v3'
 abstract: >-
-  Package for information-theoretic data analysis via
-  entropy estimation and lossy compression
+  Information-theoretic data analysis framework based on the
+  entropy estimation and the lossy compression. 
 keywords:
   - machine learning
   - information theory

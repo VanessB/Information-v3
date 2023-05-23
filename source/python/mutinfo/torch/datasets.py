@@ -2,26 +2,19 @@ import torch
 
 class AutoencoderDataset(torch.utils.data.Dataset):
     """
-    Набор данных для автокодировщика из другого набора данных.
-    
-    Параметры
-    ---------
-    dataset
-        Набор данных, из которого требуется сделать данные для автокодировщика.
-    dim : int
-        Номер подэелемента, который требуется повторить.
+    Construct dataset for autoencoder training from another dataset.
     """
     
     def __init__(self, dataset, dim: int=0):
         """
-        Конструктор класса.
+        Initialization.
         
-        Параметры
-        ---------
+        Parameters
+        ----------
         dataset
-            Набор данных, из которого требуется сделать данные для автокодировщика.
+            The dataset from which to make dataset for the autoencoder.
         dim : int, optional
-            Номер подэелемента, который требуется повторить.
+            The number of the subelement (in each entry) to be repeated.
         """
         
         self.dataset = dataset

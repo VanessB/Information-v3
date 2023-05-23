@@ -5,62 +5,62 @@ from mutinfo.torch.layers import AdditiveGaussianNoise
 
 class ConvEncoder(torch.nn.Module):
     """
-    Свёрточный кодировшик.
+    Convolutional encoder.
     
-    Параметры
-    ---------
+    Parameters
+    ----------
     latent_dim : int
-        Размерность скрытого представления.
+        Latent representation dimension.
     """
     
     def __init__(self, latent_dim: int):
         super().__init__()
         self.latent_dim = latent_dim
         
-        # Шум.
+        # Noise.
         self.dropout = torch.nn.Dropout(0.1)
         
-        # Активации.
+        # Activations.
         self.activation = torch.nn.LeakyReLU()
         self.sigmoid = torch.nn.Sigmoid()
         
-        # Свёртки.
+        # Convolutions.
         self.conv2d_1 = torch.nn.Conv2d(1, 8, kernel_size=3, padding='same')
         self.conv2d_2 = torch.nn.Conv2d(8, 16, kernel_size=3, padding='same')
         self.conv2d_3 = torch.nn.Conv2d(16, 32, kernel_size=3, padding='same')
         
         self.maxpool2d = torch.nn.MaxPool2d((2,2))
         
-        # Полносвязные слои.
+        # Dense.
         self.linear_1 = torch.nn.Linear(288, 128)
         self.linear_2 = torch.nn.Linear(128, self.latent_dim)
         
         
     def forward(self, x: torch.tensor) -> torch.tensor:
-        # Свёртка №1
+        # Convolution №1
         x = self.dropout(x)
         x = self.conv2d_1(x)
         x = self.maxpool2d(x)
         layer_1 = self.activation(x)
         
-        # Свёртка №2
+        # Convolution №2
         x = self.dropout(layer_1)
         x = self.conv2d_2(x)
         x = self.maxpool2d(x)
         layer_2 = self.activation(x)
         
-        # Свёртка №3
+        # Convolution №3
         x = self.dropout(layer_2)
         x = self.conv2d_3(x)
         x = self.maxpool2d(x)
         layer_3 = self.activation(x)
         
-        # Полносвязный слой №1
+        # Dense №1
         x = torch.flatten(layer_3, 1)
         x = self.linear_1(x)
         layer_4 = self.activation(x)
         
-        # Полносвязный слой №2
+        # Dense №2
         x = self.linear_2(layer_4)
         layer_5 = self.sigmoid(x)
         
@@ -70,55 +70,55 @@ class ConvEncoder(torch.nn.Module):
 
 class ConvDecoder(torch.nn.Module):
     """
-    Свёрточный декодировщик.
+    Convolutional decoder.
     
-    Параметры
-    ---------
+    Parameters
+    ----------
     latent_dim : int
-        Размерность скрытого представления.
+        Latent representation dimension.
     """
         
     def __init__(self, latent_dim: int):
         super().__init__()
         self.latent_dim = latent_dim
         
-        # Активации.
+        # Activations.
         self.activation = torch.nn.LeakyReLU()
         self.sigmoid = torch.nn.Sigmoid()
         
-        # Свёртки.
+        # Convolutions.
         self.conv2d_1 = torch.nn.Conv2d(32, 16, kernel_size=3, padding='same')
         self.conv2d_2 = torch.nn.Conv2d(16, 8, kernel_size=3, padding='same')
         self.conv2d_3 = torch.nn.Conv2d(8, 1, kernel_size=3, padding='same')
         
         self.upsample = torch.nn.Upsample(scale_factor=2)
         
-        # Полносвязные слои.
+        # Dense.
         self.linear_1 = torch.nn.Linear(latent_dim, 128)
         self.linear_2 = torch.nn.Linear(128, 1568)
         
         
     def forward(self, x: torch.tensor) -> torch.tensor:
-        # Полносвязный слой №1
+        # Dense №1
         x = self.linear_1(x)
         layer_1 = self.activation(x)
         
-        # Полносвязный слой №2
+        # Dense №2
         x = self.linear_2(layer_1)
         layer_2 = self.activation(x)
         
-        # Свёртка №1
+        # Convolution №1
         x = torch.reshape(layer_2, (-1, 32, 7, 7))
         x = self.conv2d_1(x)
         x = self.upsample(x)
         layer_3 = self.activation(x)
         
-        # Свёртка №2
+        # Convolution №2
         x = self.conv2d_2(layer_3)
         x = self.upsample(x)
         layer_4 = self.activation(x)
         
-        # Свёртка №3
+        # Convolution №3
         x = self.conv2d_3(layer_4)
         layer_5 = x #self.sigmoid(x)
         
@@ -128,14 +128,14 @@ class ConvDecoder(torch.nn.Module):
     
 class DenseEncoder(torch.nn.Module):
     """
-    Полносвязный кодировшик.
+    Dense encoder.
     
-    Параметры
-    ---------
+    Parameters
+    ----------
     intput_dim : int
-        Размерность входа.
+        Input dimension.
     latent_dim : int
-        Размерность скрытого представления.
+        Latent representation dimension.
     """
     
     def __init__(self, input_dim: int, latent_dim: int):
@@ -143,31 +143,31 @@ class DenseEncoder(torch.nn.Module):
         self.input_dim = input_dim
         self.latent_dim = latent_dim
         
-        # Шум.
+        # Noise.
         self.dropout = torch.nn.Dropout(0.1)
         
-        # Активации.
+        # Activation.
         self.activation = torch.nn.LeakyReLU()
         self.sigmoid = torch.nn.Sigmoid()
         
-        # Полносвязные слои.
+        # Dense.
         self.linear_1 = torch.nn.Linear(self.input_dim, 24)
         self.linear_2 = torch.nn.Linear(24, 16)
         self.linear_3 = torch.nn.Linear(16, self.latent_dim)
         
         
     def forward(self, x: torch.tensor) -> torch.tensor:
-        # Полносвязный слой №1
+        # Dense №1
         x = self.dropout(x)
         x = self.linear_1(x)
         layer_1 = self.activation(x)
         
-        # Полносвязный слой №2
+        # Dense №2
         x = self.dropout(layer_1)
         x = self.linear_2(x)
         layer_2 = self.activation(x)
         
-        # Полносвязный слой №3
+        # Dense №3
         x = layer_2 #self.dropout(layer_2)
         x = self.linear_3(x)
         layer_3 = self.sigmoid(x)
@@ -178,14 +178,14 @@ class DenseEncoder(torch.nn.Module):
     
 class DenseDecoder(torch.nn.Module):
     """
-    Полносвязный кодировшик.
+    Dense decoder.
     
     Параметры
     ---------
     latent_dim : int
-        Размерность скрытого представления.
+        Latent representation dimension.
     output_dim : int
-        Размерность входа.
+        Output dimension.
     """
         
     def __init__(self, latent_dim: int, output_dim: int):
@@ -193,25 +193,25 @@ class DenseDecoder(torch.nn.Module):
         self.latent_dim = latent_dim
         self.output_dim = output_dim
         
-        # Активации.
+        # Activations.
         self.activation = torch.nn.LeakyReLU()
         
-        # Полносвязные слои.
+        # Dense.
         self.linear_1 = torch.nn.Linear(self.latent_dim, 16)
         self.linear_2 = torch.nn.Linear(16, 24)
         self.linear_3 = torch.nn.Linear(24, self.output_dim)
         
         
     def forward(self, x: torch.tensor) -> torch.tensor:
-        # Полносвязный слой №1
+        # Dense №1
         x = self.linear_1(x)
         layer_1 = self.activation(x)
         
-        # Полносвязный слой №2
+        # Dense №2
         x = self.linear_2(layer_1)
         layer_2 = self.activation(x)
         
-        # Полносвязный слой №3
+        # Dense №3
         layer_3 = self.linear_3(layer_2)
         
         return layer_3
@@ -220,30 +220,30 @@ class DenseDecoder(torch.nn.Module):
 
 class Autoencoder(torch.nn.Module):
     """
-    Автокодировшик.
+    Autoencoder.
     
-    Параметры
-    ---------
+    Parameters
+    ----------
     encoder : torch.nn.Module
-        Кодировщик.
+        Encoder.
     decoder : torch.nn.Module
-        Декодировщик.
+        Decoder.
     latent_dim : int
-        Размерность скрытого представления.
+        Latent representation dimension.
     sigma : float
-        Стандартное отклонение аддитивного гауссова шума,
-        добавляемого в скрытое представление.
+        Standard deviation of additive Gaussian noise,
+        injected into the latent representation.
     """
 
     def __init__(self, encoder, decoder, sigma: float=0.1):
         super().__init__()
         #self.sigma = sigma
         
-        # Кодировщик и декодировщик.
+        # Encoder and decoder.
         self.encoder = encoder
         self.decoder = decoder
         
-        # Шум.
+        # Noise.
         self.agn = AdditiveGaussianNoise(sigma=sigma, enabled_on_inference=False)
         
         
@@ -264,7 +264,7 @@ class Autoencoder(torch.nn.Module):
 
 
 def evaluate_model(model, dataloader, loss, device) -> float:
-    # Выход из режима обучения.
+    # Exit training mode.
     was_in_training = model.training
     model.eval()
   
@@ -283,7 +283,7 @@ def evaluate_model(model, dataloader, loss, device) -> float:
             
         avg_loss /= total_samples
         
-    # Возвращение модели к исходному режиму.
+    # Return to the original mode.
     model.train(was_in_training)
     
     return avg_loss

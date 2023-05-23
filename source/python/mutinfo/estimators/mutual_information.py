@@ -7,22 +7,22 @@ from .entropy import EntropyEstimator
 
 class MutualInfoEstimator:
     """
-    Класс-эстиматор взаимной информации.
+    Mutual information estimator.
     """
 
     def __init__(self, X_is_discrete: bool=False, Y_is_discrete: bool=False,
                  entropy_estimator_params: dict={'method': 'KL', 'functional_params': None}):
         """
-        Инициализация.
+        Initialization.
 
-        Параметры
-        ---------
+        Parameters
+        ----------
         X_is_discrete : bool
-            Является ли X дискретной случайной величиной.
+            X is a discrete random variable.
         Y_is_discrete : bool
-            Является ли Y дискретной случайной величиной.
+            Y is a discrete random variable.
         entropy_estimator_params : dict
-            Параметры оценщика энтропии.
+            Entropy estimator parameters.
         """
 
         self._X_is_discrete = X_is_discrete
@@ -36,16 +36,16 @@ class MutualInfoEstimator:
 
     def fit(self, X, Y, verbose: int=0):
         """
-        Подгонка параметров эстиматора под экспериментальные данные.
+        Fit parameters of the estimator.
 
-        Параметры
-        ---------
+        Parameters
+        ----------
         X : Iterable
-            Выборка из первой случайной величины.
+            I.i.d. samples from X.
         Y : Iterable
-            Выборка из второй случайной величины.
+            I.i.d. samples from Y.
         verbose : int
-            Подробность вывода.
+            Output verbosity.
         """
 
         if X.shape[0] != Y.shape[0]:
@@ -54,78 +54,78 @@ class MutualInfoEstimator:
         if not self._X_is_discrete and not self._Y_is_discrete:
             if self.entropy_estimator_params['method'] == 'KDE':
                 if verbose >= 1:
-                    print("Настройка оценщика для (X,Y)")
+                    print("Fitting the estimator for (X,Y)")
 
                 self._X_Y_entropy_estimator = EntropyEstimator(**self.entropy_estimator_params)
                 self._X_Y_entropy_estimator.fit(np.concatenate([X, Y], axis=1), verbose=verbose)
 
                 if verbose >= 1:
-                    print("Настройка оценщика для X")
+                    print("Fitting the estimator for X")
 
                 self._X_entropy_estimator = EntropyEstimator(**self.entropy_estimator_params)
                 self._X_entropy_estimator.fit(X, fit_bandwidth=False, verbose=verbose)
 
                 if verbose >= 1:
-                    print("Настройка оценщика для Y")
+                    print("Fitting the estimator for Y")
 
                 self._Y_entropy_estimator = EntropyEstimator(**self.entropy_estimator_params)
                 self._Y_entropy_estimator.fit(Y, fit_bandwidth=False, verbose=verbose)
 
-                # Использование подобранной ширины окна для оценки плотностей X и Y.
+                # Bandwidth value is shared among estimators.
                 bandwidth = self._X_Y_entropy_estimator._functional.bandwidth
                 self._X_entropy_estimator._functional.bandwidth = bandwidth
                 self._Y_entropy_estimator._functional.bandwidth = bandwidth
                 
             else:
                 if verbose >= 1:
-                    print("Настройка оценщика для (X,Y)")
+                    print("Fitting the estimator for (X,Y)")
 
                 self._X_Y_entropy_estimator = EntropyEstimator(**self.entropy_estimator_params)
                 self._X_Y_entropy_estimator.fit(np.concatenate([X, Y], axis=1), verbose=verbose)
 
                 if verbose >= 1:
-                    print("Настройка оценщика для X")
+                    print("Fitting the estimator for X")
 
                 self._X_entropy_estimator = EntropyEstimator(**self.entropy_estimator_params)
                 self._X_entropy_estimator.fit(X, verbose=verbose)
 
                 if verbose >= 1:
-                    print("Настройка оценщика для Y")
+                    print("Fitting the estimator for Y")
 
                 self._Y_entropy_estimator = EntropyEstimator(**self.entropy_estimator_params)
                 self._Y_entropy_estimator.fit(Y, verbose=verbose)
                 
         elif self._X_is_discrete and not self._Y_is_discrete:
             if verbose >= 1:
-                print("Настройка оценщика для Y")
+                print("Fitting the estimator for Y")
 
             self._Y_entropy_estimator = EntropyEstimator(**self.entropy_estimator_params)
             self._Y_entropy_estimator.fit(Y, verbose=verbose)
 
         elif not self._X_is_discrete and self._Y_is_discrete:
             if verbose >= 1:
-                print("Настройка оценщика для X")
+                print("Fitting the estimator for X")
 
             self._X_entropy_estimator = EntropyEstimator(**self.entropy_estimator_params)
             self._X_entropy_estimator.fit(X, verbose=verbose)
 
         else:
-            # В случае, когда обе случайные величины дискретные, подгонка не требуется.
+            # No fitting is required when both variables are discrete.
             pass
 
 
     def estimate(self, X, Y, verbose: int=0):
         """
-        Оценка взаимной информации.
+        Mutual information estimation.
 
-        Параметры
-        ---------
+        Parameters
+        ----------
         X : Iterable
-            Выборка из первой случайной величины.
+            I.i.d. samples from X.
         Y : Iterable
-            Выборка из второй случайной величины.
+            I.i.d. samples from Y.
         verbose : int
-            Подробность вывода.
+            Output verbosity.
         """
 
         if X.shape[0] != Y.shape[0]:
@@ -146,28 +146,28 @@ class MutualInfoEstimator:
 
     def _estimate_cont_cont(self, X, Y, verbose: int=0):
         """
-        Оценка в случае, когда обе случайные величины непрерывные.
+        Mutual information estimation for a pair of absolutely continuous random variables.
 
-        Параметры
-        ---------
+        Parameters
+        ----------
         X : array_like
-            Выборка из первой случайной величины.
+            I.i.d. samples from X.
         Y : array_like
-            Выборка из второй случайной величины.
+            I.i.d. samples from Y.
         verbose : int
-            Подробность вывода.
+            Output verbosity.
         """
 
         if verbose >= 1:
-            print("Оценка энтропии для X")
+            print("Entropy estimation for X")
         H_X, H_X_err = self._X_entropy_estimator.estimate(X, verbose=verbose)
 
         if verbose >= 1:
-            print("Оценка энтропии для Y")
+            print("Entropy estimation for Y")
         H_Y, H_Y_err = self._Y_entropy_estimator.estimate(Y, verbose=verbose)
 
         if verbose >= 1:
-            print("Оценка энтропии для (X,Y)")
+            print("Entropy estimation for (X,Y)")
         H_X_Y, H_X_Y_err = self._X_Y_entropy_estimator.estimate(np.concatenate([X, Y], axis=1), verbose=verbose)
 
         return (H_X + H_Y - H_X_Y, H_X_err + H_Y_err + H_X_Y_err)
@@ -176,46 +176,46 @@ class MutualInfoEstimator:
     def _estimate_cont_disc(self, X, Y, X_entropy_estimator: EntropyEstimator,
                             verbose: int=0):
         """
-        Оценка в случае, когда X непрерывен, а Y дискретен.
+        Mutual information estimation for an absolutely continuous X and discrete Y.
         
-        Параметры
-        ---------
+        Parameters
+        ----------
         X : array_like
-            Выборка из первой случайной величины.
+            I.i.d. samples from X.
         Y : Iterable
-            Выборка из второй случайной величины.
+            I.i.d. samples from Y.
         X_entropy_estimator : EntropyEstimator
-            Оценщик энтропии для X.
+            Entropy estimator for X.
         verbose : int
-            Подробность вывода.
+            Output verbosity.
         """
 
         if verbose >= 1:
-            print("Оценка энтропии для непрерывной случайной величины")
+            print("Entropy estimation for the absolutely continuous random variable")
         H_X, H_X_err = X_entropy_estimator.estimate(X, verbose=verbose)
 
-        # Подсчёт частот.
+        # Empirical frequencies estimation.
         frequencies = Counter(Y)
         for y in frequencies.keys():
             frequencies[y] /= Y.shape[0]
 
         if verbose >= 2:
-            print("Частоты: ")
+            print("Empirical frequencies: ")
             print(frequencies)
 
-        # Вычисление условной энтропии для каждого класса Y.
+        # Conditional entropy estimation.
         H_X_mid_y = dict()
         for y in frequencies.keys():
             X_mid_y = X[Y == y]
 
-            # Для каждого y требуется обучить отдельный оценщик.
+            # For every value of Y it is required to refit the estimator.
             if verbose >= 1:
-                print("Оценка энтропии для непрерывной случайной величины при условии дискретной")
+                print("Conditional entropy estimation for the absolutely continuous random variable")
             X_mid_y_entropy_estimator = EntropyEstimator(**self.entropy_estimator_params)
             X_mid_y_entropy_estimator.fit(X_mid_y, verbose=verbose)
             H_X_mid_y[y] = X_mid_y_entropy_estimator.estimate(X_mid_y, verbose=verbose)
 
-        # Итоговая условная энтропия для X.
+        # Final conditional entropy estimate.
         cond_H_X     = math.fsum([frequencies[y] * H_X_mid_y[y][0] for y in frequencies.keys()])
         cond_H_X_err = math.fsum([frequencies[y] * H_X_mid_y[y][1] for y in frequencies.keys()])
 
@@ -224,16 +224,16 @@ class MutualInfoEstimator:
 
     def _estimate_disc_disc(self, X, Y, verbose: int=0):
         """
-        Оценка в случае, когда обе случайные величины дискретные.
+        Mutual information estimation for a pair of discrete random variables.
 
-        Параметры
-        ---------
-        X : Iterable
-            Выборка из первой случайной величины.
-        Y : Iterable
-            Выборка из второй случайной величины.
+        Parameters
+        ----------
+        X : array_like
+            I.i.d. samples from X.
+        Y : array_like
+            I.i.d. samples from Y.
         verbose : int
-            Подробность вывода.
+            Output verbosity.
         """
 
         H_X = 0.0
@@ -256,13 +256,13 @@ class MutualInfoEstimator:
             H_X_Y -= frequencies_X_Y[x_y] * np.log(frequencies_X_Y[x_y])
 
         if verbose >= 2:
-            print("Частоты X: ")
+            print("Empirical frequencies of X: ")
             print(frequencies_X)
 
-            print("Частоты Y: ")
+            print("Empirical frequencies of Y: ")
             print(frequencies_Y)
 
-            print("Частоты (X, Y): ")
+            print("Empirical frequencies of (X, Y): ")
             print(frequencies_X_Y)
 
         return (H_X + H_Y - H_X_Y, 0.0)
@@ -271,20 +271,20 @@ class MutualInfoEstimator:
 
 class LossyMutualInfoEstimator(MutualInfoEstimator):
     """
-    Класс-эстиматор взаимной информации, использующий сжатие.
+    Mutual information estimator, complemented with lossy compressor.
     """
 
     def __init__(self, X_compressor: callable=None, Y_compressor: callable=None,
                  *args, **kwargs):
         """
-        Инициализация.
+        Initialization.
 
-        Параметры
-        ---------
+        Parameters
+        ----------
         X_compressor : callable
-            Вызываемый объект, выполняющий сжатие данных X.
+            Callable object that performs compression of X.
         Y_compressor : callable
-            Вызываемый объект, выполняющий сжатие данных Y.
+            Callable object that performs compression of Y.
         """
 
         super().__init__(*args, **kwargs)
@@ -294,16 +294,16 @@ class LossyMutualInfoEstimator(MutualInfoEstimator):
 
     def fit(self, X, Y, verbose: int=0):
         """
-        Подгонка параметров эстиматора под экспериментальные данные.
+        Fit parameters of the estimator.
 
-        Параметры
-        ---------
+        Parameters
+        ----------
         X : Iterable
-            Выборка из первой случайной величины.
+            I.i.d. samples from X.
         Y : Iterable
-            Выборка из второй случайной величины.
+            I.i.d. samples from Y.
         verbose : int
-            Подробность вывода.
+            Output verbosity.
         """
 
         X_compressed = X if self._X_compressor is None else self._X_compressor(X)
@@ -313,16 +313,16 @@ class LossyMutualInfoEstimator(MutualInfoEstimator):
         
     def estimate(self, X, Y, verbose: int=0):
         """
-        Оценка взаимной информации.
+        Mutual information estimation.
 
-        Параметры
-        ---------
+        Parameters
+        ----------
         X : Iterable
-            Выборка из первой случайной величины.
+            I.i.d. samples from X.
         Y : Iterable
-            Выборка из второй случайной величины.
+            I.i.d. samples from Y.
         verbose : int
-            Подробность вывода.
+            Output verbosity.
         """
 
         X_compressed = X if self._X_compressor is None else self._X_compressor(X)

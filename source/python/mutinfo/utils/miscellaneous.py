@@ -6,36 +6,36 @@ def minimize_recursive(function: callable, left: float, right: float,
                        n_points: int=7, atol: float=0.0, rtol: float=1e-2,
                        verbose: int=0) -> float:
     """
-    Рекурсивный поиск минимума функции.
+    Recursive function minimization.
     
-    Параметры
-    ---------
+    Parameters
+    ----------
     function : callable
-        Исследуемая унимодальная функция.
+        Unimodal function.
     left : float
-        Левый конец отрезка поиска.
+        The left end of the search interval.
     right : float
-        Правый конец отрезка поиска.
+        The right end of the search interval.
     n_points : int
-        Размер сетки поиска.
+        Search grid size.
     atol : float
-        Допустимое абсолютное значение ошибки.
+        Absolute tolerance.
     rtol : float
-        Допустимое относительное значение ошибки.
+        Relative tolerance.
     verbose : int
-        Подробность вывода.
+        Output verbosity.
     """
 
     while True:
         grid = np.logspace(np.log10(left), np.log10(right), n_points)
         if verbose >= 1:
-            print("Поиск по сетке: ", grid)
+            print("Grid search: ", grid)
             
-        # Вычисление значений функции вдоль сетки.
+        # Evaluate the function along the grid.
         evaluated = np.array([function(element) for element in grid])
         best_index = np.nanargmin(evaluated)
 
-        # Выбор нового отрезка.
+        # Choose new interval.
         if best_index == 0:
             left  *= left / right
             right  = grid[2]
@@ -52,14 +52,14 @@ def minimize_recursive(function: callable, left: float, right: float,
             
 def ball_volume(dim: int, radius: float=1.0) -> float:
     """
-    Объём многомерного шара.
+    Volume of a multidimensional ball.
     
-    Параметры
-    ---------
+    Parameters
+    ----------
     dim : int
-        Размерность пространства.
+        Dimension.
     radius : float
-        Радиус шара.
+        Ball radius.
     """
     
     return ((math.sqrt(math.pi) * radius)**dim) / math.gamma(0.5 * dim + 1.0)

@@ -10,9 +10,14 @@ from datetime import datetime
 from pathlib import Path
 
 
-def show_images(images: list(), labels: list()=None, n_cols: int=3):
+def show_images(images: list, labels: list[str]=None, n_cols: int=3):
     """
-    Вывести изображения из списка.
+    Show list of images
+    
+    Parameters
+    ----------
+    images : list
+    
     """
     
     if labels is None:
@@ -32,12 +37,63 @@ def show_images(images: list(), labels: list()=None, n_cols: int=3):
         plt.yticks([])
     
     plt.show();
+    
+    
+    
+def plot_MI_planes(MI_X_L: dict, MI_L_Y: dict, filtered_MI_X_L: dict=None, filtered_MI_L_Y: dict=None,
+                   n_columns: int=3) -> None:
+    """
+    Plot information plane data for each layer in a subplot.
+    
+    Parameters
+    ----------
+    MI_X_L : dict
+        Raw I(X;L) data (with errorbars).
+    MI_L_Y : dict
+        Raw I(L;Y) data (with errorbars).
+    filtered_MI_X_L : dict
+        Filtered I(X;L) data.
+    filtered_MI_L_Y : dict
+        Filtered I(L;Y) data.
+    """
+    
+    assert len(MI_X_L) == len(MI_L_Y)
+    
+    filtered_provided = (not filtered_MI_X_L is None) and (not filtered_MI_L_Y is None)
+    
+    # Number of rows.
+    n_rows = len(MI_X_L) // n_columns + (len(MI_X_L) % n_columns != 0)
+    
+    width = 6
+    height = 4
+    fig, ax = plt.subplots(n_rows, n_columns, figsize=(width * n_columns, height * n_rows))
+    for index, layer_name in enumerate(MI_X_L.keys()):
+        row_index = index // n_columns
+        column_index = index % n_columns
+        subplot_ax = ax[row_index, column_index]
+        
+        subplot_ax.grid(color='#000000', alpha=0.15, linestyle='-', linewidth=1, which='major')
+        subplot_ax.grid(color='#000000', alpha=0.1, linestyle='-', linewidth=0.5, which='minor')
+        subplot_ax.set_title(str(layer_name))
+        
+        x =     [item[0] for item in MI_X_L[layer_name]]
+        x_err = [item[1] for item in MI_X_L[layer_name]]
+        y =     [item[0] for item in MI_L_Y[layer_name]]
+        y_err = [item[1] for item in MI_L_Y[layer_name]]
+        
+        if filtered_provided:
+            subplot_ax.errorbar(x, y, x_err, y_err, ls='none', solid_capstyle='projecting', capsize=3, alpha=0.25, color='lightblue')
+            subplot_ax.plot(filtered_MI_X_L[layer_name], filtered_MI_L_Y[layer_name], color='red')
+        else:
+            subplot_ax.plot(x, y)
+            
+    plt.show();
 
 
     
 def split_lists(list_of_tuples: list()) -> tuple():
     """
-    Список кортежей в кортеж списков.
+    List of tuples to tuple of lists.
     """
     
     assert len(list_of_tuples) > 0
@@ -53,10 +109,10 @@ def split_lists(list_of_tuples: list()) -> tuple():
 
 def get_outputs(model, dataloader, device) -> list():
     """
-    Получение наборов данных по слоям.
+    Get outputs of the model.
     """
     
-    # Выход из режима обучения.
+    # Exit training mode.
     was_in_training = model.training
     model.eval()
     
@@ -69,7 +125,7 @@ def get_outputs(model, dataloader, device) -> list():
             
     outputs = torch.cat(outputs)
     
-    # Возвращение модели к исходному режиму.
+    # Return to the original mode.
     model.train(was_in_training)
     
     return outputs
@@ -78,10 +134,10 @@ def get_outputs(model, dataloader, device) -> list():
 
 def get_layers(model, dataloader, device) -> list():
     """
-    Получение наборов данных по слоям.
+    Get outputs of all layers.
     """
     
-    # Выход из режима обучения.
+    # Exit training mode.
     was_in_training = model.training
     model.eval()
     
@@ -94,30 +150,31 @@ def get_layers(model, dataloader, device) -> list():
             for layer_name, layer in layers.items():
                 outputs[layer_name].append(layer.detach().cpu())
             
-    # "Транспонирование".
+    # "Transpose".
     outputs = {layer_name: torch.cat(batches) for layer_name, batches in outputs.items()}
     
-    # Возвращение модели к исходному режиму.
+    # Return to the original mode.
     model.train(was_in_training)
     
     return outputs
 
 
+
 def save_results(results: dict, settings: dict, path: Path):
     """
-    Сохранения результатов (информационная плоскость и пр.)
+    Save IP experiments results (parameters, metrics, IP data, ...).
     """
     
     directory_path = path / (datetime.now().strftime("%d-%b-%Y_%H:%M:%S") + "/")
     os.makedirs(directory_path, exist_ok=True)
     
-    # Метрики.
+    # Metrics.
     metrics = pd.DataFrame()
     for metric_name, metric_values in results['metrics'].items():
         metrics[metric_name] = metric_values
     metrics.to_csv(directory_path / "metrics.csv", index=False)
         
-    # Взаимная информация.
+    # Mutual information.
     for layer_name in results["MI_X_L"].keys():
         MI_dataframe = pd.DataFrame()
         
@@ -132,6 +189,6 @@ def save_results(results: dict, settings: dict, path: Path):
         
         MI_dataframe.to_csv(directory_path / f"{layer_name}.csv", index=False)
         
-    # Настройки.
+    # Settings.
     with open(directory_path / "settings.json", 'w') as outfile:
         json.dump(settings, outfile)

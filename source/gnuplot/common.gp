@@ -23,12 +23,12 @@ set yrange  [ 0 : * ] noreverse writeback
 
 #set key Left left top reverse
 
-# Шаг делений.
+# Tics.
 
 set mxtics 10
 set mytics 10
 
-# Сетка.
+# Grid.
 
 set style line 100 lt 1 lc rgb "#444444" lw 1
 set style line 101 lt 1 lc rgb "#CCCCCC" lw 1
@@ -37,13 +37,13 @@ set style line 102 lt 1 lc rgb "#EEEEEE" lw 1
 set grid mytics ytics ls 101, ls 102
 set grid mxtics xtics ls 101, ls 102
 
-# Масштаб.
+# Scale.
 
 #set xtics 1
 #set ytics 0.1
 #set size ratio -10
 
-# Палитра
+# Palette
 
 #set palette gray positive gamma 1.5
 
@@ -60,7 +60,7 @@ set linetype  9 lc rgb "#444444" lw 1
 set linetype cycle  9
 }
 
-# Построение графиков.
+# Plotting.
 
 set pointsize 2
 set style data lines
@@ -75,4 +75,4 @@ plot_small_points = small_points_common # . "pointtype 2"
 plot_points       = points_common       # . "pointtype 2"
 plot_big_points   = big_points_common   # . "pointtype 2"
 
-data_path = '../data/'                                           # Директория с данными.
+data_path = '../data/'  # Data folder.
