@@ -59,8 +59,8 @@ def normal_to_rectangle_coords(X: np.array, min_width: float=0.0, max_width: flo
     Map Gaussian random vector with unit variance to rectangle parameters.
     The coordinates of the corners are distributed uniformly, preserving order.
     
-    Параметры
-    ---------
+    Parameters
+    ----------
     X : numpy.array
         Samples from a multivariate normal distribution, shape: (?,4).
     min_width : float

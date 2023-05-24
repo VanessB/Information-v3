@@ -180,8 +180,8 @@ class DenseDecoder(torch.nn.Module):
     """
     Dense decoder.
     
-    Параметры
-    ---------
+    Parameters
+    ----------
     latent_dim : int
         Latent representation dimension.
     output_dim : int
