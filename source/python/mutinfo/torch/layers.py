@@ -33,7 +33,7 @@ class AdditiveGaussianNoise(torch.nn.Module):
 
     def forward(self, x):
         if (self.training or self.enabled_on_inference) and self.sigma != 0:
-            scale = self.sigma * x.detach() if self.relative_scale else self.sigma
+            scale = self.sigma * x if self.relative_scale else self.sigma
             sampled_noise = self.noise.repeat(*x.size()).normal_() * scale
             x = x + sampled_noise
         return x

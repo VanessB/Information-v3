@@ -3,9 +3,9 @@ from tqdm import tqdm
 from mutinfo.torch.layers import AdditiveGaussianNoise
 
 
-class ConvEncoder(torch.nn.Module):
+class MNIST_ConvEncoder(torch.nn.Module):
     """
-    Convolutional encoder.
+    MNIST Convolutional encoder.
     
     Parameters
     ----------
@@ -68,9 +68,9 @@ class ConvEncoder(torch.nn.Module):
 
 
 
-class ConvDecoder(torch.nn.Module):
+class MNIST_ConvDecoder(torch.nn.Module):
     """
-    Convolutional decoder.
+    MNIST Convolutional decoder.
     
     Parameters
     ----------
@@ -123,6 +123,135 @@ class ConvDecoder(torch.nn.Module):
         layer_5 = x #self.sigmoid(x)
         
         return layer_5
+    
+    
+
+class CIFAR10_ConvEncoder(torch.nn.Module):
+    """
+    CIFAR10 Convolutional encoder.
+    
+    Parameters
+    ----------
+    latent_dim : int
+        Latent representation dimension.
+    """
+    
+    def __init__(self, latent_dim: int):
+        super().__init__()
+        self.latent_dim = latent_dim
+        
+        # Noise.
+        self.dropout = torch.nn.Dropout(0.1)
+        
+        # Activations.
+        self.activation = torch.nn.LeakyReLU()
+        self.sigmoid = torch.nn.Tanh()
+        
+        # Convolutions.
+        self.conv2d_1 = torch.nn.Conv2d(3, 16, kernel_size=3, padding='same')
+        self.conv2d_2 = torch.nn.Conv2d(16, 32, kernel_size=3, padding='same')
+        self.conv2d_3 = torch.nn.Conv2d(32, 64, kernel_size=3, padding='same')
+        
+        self.maxpool2d = torch.nn.MaxPool2d((2,2))
+        
+        # Dense.
+        self.linear_1 = torch.nn.Linear(64*4*4, 128)
+        self.linear_2 = torch.nn.Linear(128, self.latent_dim)
+        
+        
+    def forward(self, x: torch.tensor) -> torch.tensor:
+        # Convolution №1
+        x = self.dropout(x)
+        x = self.conv2d_1(x)
+        x = self.maxpool2d(x)
+        layer_1 = self.activation(x)
+        
+        # Convolution №2
+        x = self.dropout(layer_1)
+        x = self.conv2d_2(x)
+        x = self.maxpool2d(x)
+        layer_2 = self.activation(x)
+        
+        # Convolution №3
+        x = self.dropout(layer_2)
+        x = self.conv2d_3(x)
+        x = self.maxpool2d(x)
+        layer_3 = self.activation(x)
+        
+        # Dense №1
+        x = torch.flatten(layer_3, 1)
+        x = self.linear_1(x)
+        layer_4 = self.activation(x)
+        
+        # Dense №2
+        x = self.linear_2(layer_4)
+        layer_5 = self.sigmoid(x)
+        
+        return layer_5
+
+
+
+class CIFAR10_ConvDecoder(torch.nn.Module):
+    """
+    CIFAR10 Convolutional decoder.
+    
+    Parameters
+    ----------
+    latent_dim : int
+        Latent representation dimension.
+    """
+        
+    def __init__(self, latent_dim: int):
+        super().__init__()
+        self.latent_dim = latent_dim
+        
+        # Activations.
+        self.activation = torch.nn.LeakyReLU()
+        self.sigmoid = torch.nn.Sigmoid()
+        
+        # Convolutions.
+        self.conv2d_1 = torch.nn.Conv2d(64, 32, kernel_size=3, padding='same', padding_mode='reflect')
+        self.conv2d_2 = torch.nn.Conv2d(32, 32, kernel_size=3, padding='same', padding_mode='reflect')
+        self.conv2d_3 = torch.nn.Conv2d(32, 16, kernel_size=3, padding='same', padding_mode='reflect')
+        self.conv2d_4 = torch.nn.Conv2d(16, 3, kernel_size=3, padding='same', padding_mode='reflect')
+        
+        self.upsample = torch.nn.Upsample(scale_factor=2)
+        
+        # Dense.
+        self.linear_1 = torch.nn.Linear(latent_dim, 128)
+        self.linear_2 = torch.nn.Linear(128, 64*4*4)
+        
+        
+    def forward(self, x: torch.tensor) -> torch.tensor:
+        # Dense №1
+        x = self.linear_1(x)
+        layer_1 = self.activation(x)
+        
+        # Dense №2
+        x = self.linear_2(layer_1)
+        layer_2 = self.activation(x)
+        
+        # Convolution №1
+        x = torch.reshape(layer_2, (-1, 64, 4, 4))
+        x = self.conv2d_1(x)
+        x = self.upsample(x)
+        layer_3 = self.activation(x)
+        
+        # Convolution №2
+        x = self.conv2d_2(layer_3)
+        x = self.upsample(x)
+        layer_4 = self.activation(x)
+        
+        # Convolution №3
+        x = self.conv2d_3(layer_4)
+        x = self.upsample(x)
+        layer_5 = self.activation(x)
+        
+        # Convolution №4
+        x = self.conv2d_4(layer_5)
+        layer_6 = x
+        
+        return layer_6
     
     
     
@@ -291,8 +420,8 @@ def evaluate_model(model, dataloader, loss, device) -> float:
 
 
 def train_autoencoder(autoencoder, train_dataloader, test_dataloader, autoencoder_loss,
-                      device, n_epochs: int=10, callback: callable=None) -> dict():
-    autoencoder_opt = torch.optim.Adam(autoencoder.parameters(), lr=1e-2)
+                      device, n_epochs: int=10, callback: callable=None, lr=1e-2) -> dict():
+    autoencoder_opt = torch.optim.Adam(autoencoder.parameters(), lr=lr)
     
     autoencoder_metrics = {
         "train_loss" : [],

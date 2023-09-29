@@ -21,8 +21,9 @@ def norm_corr_from_MI(mutual_information: float) -> float:
     return np.sqrt(1 - np.exp(- 2.0 * mutual_information))
 
 
-def multivariate_normal_from_MI(X_dimension: int, Y_dimension: int, mutual_information: float,
-                                X_rotate: bool=True, Y_rotate: bool=True) -> multivariate_normal:
+def multivariate_normal_from_MI(X_dimension: int, Y_dimension: int,
+                                mutual_information: float,
+                                mix_components: bool=True) -> multivariate_normal:
     """
     Obtaining a normal random vector of `X_dimension + Y_dimension` dimension
     with the given mutual information between the first X_dimension and the
@@ -36,10 +37,8 @@ def multivariate_normal_from_MI(X_dimension: int, Y_dimension: int, mutual_infor
         The dimensionality of the second random vector.
     mutual_information : float
         Mutual information (lies in [0.0; +inf)).
-    X_rotate : bool
-        Perform random unitary mapping to the first vector.
-    Y_rotate : bool
-        Perform random unitary mapping to the second vector.
+    mix_components : bool
+        Apply random unitary mapping to both of the vector.
     """
 
     if X_dimension < 1 or Y_dimension < 1:
@@ -58,12 +57,12 @@ def multivariate_normal_from_MI(X_dimension: int, Y_dimension: int, mutual_infor
         cov_matrix[index + X_dimension][index] = corr_coef
 
     # Random rotation of the corresponding vectors.
-    if X_dimension > 1 and X_rotate:
+    if X_dimension > 1 and mix_components:
         Q_X = ortho_group.rvs(X_dimension)
     else:
         Q_X = np.identity(X_dimension)
 
-    if Y_dimension > 1 and Y_rotate:
+    if Y_dimension > 1 and mix_components:
         Q_Y = ortho_group.rvs(Y_dimension)
     else:
         Q_Y = np.identity(Y_dimension)
